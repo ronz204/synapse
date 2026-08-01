@@ -1,0 +1,37 @@
+name: synapse
+
+services:
+  mysql:
+    image: mysql:oracle
+    container_name: synapse-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: '${DB_DATABASE}'
+      MYSQL_USER: '${DB_USERNAME}'
+      MYSQL_PASSWORD: '${DB_PASSWORD}'
+      MYSQL_ROOT_PASSWORD: '${DB_PASSWORD}'
+    ports:
+      - '${DB_PORT:-3306}:3306'
+    volumes:
+      - synapse-data:/var/lib/mysql
+    networks:
+      - synapse-network
+    healthcheck:
+      test:
+        - CMD
+        - mysqladmin
+        - ping
+        - '-p${DB_PASSWORD}'
+      retries: 3
+      timeout: 5s
+
+
+volumes:
+  synapse-data:
+    driver: local
+    name: synapse-data
+
+networks:
+  synapse-network:
+    driver: bridge
+    name: synapse-network
