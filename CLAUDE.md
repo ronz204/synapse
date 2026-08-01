@@ -151,3 +151,28 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 - Do NOT delete tests without approval.
 
 </laravel-boost-guidelines>
+
+# Project Knowledge Base
+
+This project maintains a Claude Code knowledge base under `.claude/`, built and kept current with the `archivist` skill. It captures context that isn't derivable from the code alone.
+
+## Context Docs (`.claude/docs/`)
+
+Read these before working on anything beyond a trivial change:
+
+- **`overview.md`** — what the system does and why: the curricular equivalency domain, the invariants that matter (no cycles, no silent contradictions), who uses it.
+- **`approach.md`** — the functional requirements (RC-01 through RC-03), the mandatory Hexagonal (Ports & Adapters) + DDD architecture constraint, and the project's process constraints.
+- **`modules.md`** — per-module detail for each requirement: domain entities, data shape, step-by-step flow, and invariants.
+
+## Project Rules (`.claude/rules/`)
+
+These load automatically when a matching file is opened, via `paths:` frontmatter — no manual invocation needed, listed here for visibility:
+
+- **`coding.md`** — SOLID, cohesion/coupling, and design-pattern guidance grounded in this codebase's Hexagonal/DDD boundary.
+- **`languaje.md`** — modern PHP practices (`strict_types`, backed enums, `readonly`, `match`, custom exceptions) beyond what's already covered above in this file.
+- **`elocuent.md`** — Eloquent conventions specific to this project: attribute-based model config, keeping models as persistence adapters instead of domain logic, transactional writes, status-based history instead of hard deletes.
+- **`livewire.md`** — this project's established Livewire component format, the Fortify/Livewire boundary in the auth views, and action-delegation patterns.
+
+## Skills (`.claude/skills/`)
+
+- **`archivist`** — use to create or update anything above (docs, rules, subagents, skills). It grounds every claim in the actual codebase before writing, rather than from memory or conversation alone.
