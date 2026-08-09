@@ -19,9 +19,14 @@ trait InteractsWithDataTable
 
     public string $sortDir = 'asc';
 
+    /**
+     * Which side resolves search, sort and pagination. Components using this
+     * trait declare $tableMode themselves, so the value is always set; the
+     * accessor exists so the checks below read the same way everywhere.
+     */
     public function tableMode(): string
     {
-        return $this->tableMode ?? 'client';
+        return $this->tableMode;
     }
 
     public function isServerMode(): bool
