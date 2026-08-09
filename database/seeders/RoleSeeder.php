@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Permission;
 use App\Models\Role;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -30,5 +31,27 @@ class RoleSeeder extends Seeder
         foreach ($roles as $name => $description) {
             Role::query()->firstOrCreate(['name' => $name], ['description' => $description]);
         }
+
+        $this->seedSuperadmin();
+    }
+
+    /**
+     * Superadmin is a technical role, deliberately kept out of the list above:
+     * every entry there maps to a real position at the university, while this
+     * one exists so somebody can always administer the system.
+     *
+     * DomainServiceProvider grants it an unconditional Gate::before pass, so it
+     * clears checks for permissions created after this seeder last ran. The
+     * explicit sync below keeps the pivot honest for anything that reads the
+     * relation directly instead of going through the Gate.
+     */
+    private function seedSuperadmin(): void
+    {
+        $superadmin = Role::query()->firstOrCreate(
+            ['name' => 'Superadmin'],
+            ['description' => 'Rol técnico con acceso incondicional a todo el sistema'],
+        );
+
+        $superadmin->permissions()->sync(Permission::query()->pluck('id'));
     }
 }
