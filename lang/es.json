@@ -115,5 +115,53 @@
   "The role has been deleted.": "El rol ha sido eliminado.",
   "The permission has been deleted.": "El permiso ha sido eliminado.",
   "System user roles management": "Gestión de roles de usuarios del sistema",
-  "Permissions management assigned to each role": "Gestión de permisos asignados a cada rol"
+  "Permissions management assigned to each role": "Gestión de permisos asignados a cada rol",
+
+  "Register": "Registro",
+  "Create an account": "Cree una cuenta",
+  "Enter your details below to create your account": "Ingrese sus datos para crear su cuenta",
+  "Name": "Nombre",
+  "Full name": "Nombre completo",
+  "Confirm password": "Confirmar contraseña",
+  "Create account": "Crear cuenta",
+  "Already have an account?": "¿Ya tiene una cuenta?",
+
+  "Forgot password": "Contraseña olvidada",
+  "Reset password": "Restablecer contraseña",
+  "Please enter your new password below": "Ingrese su nueva contraseña",
+
+  "Settings": "Configuración",
+  "Profile": "Perfil",
+  "Profile settings": "Configuración del perfil",
+  "Update your name and email address": "Actualice su nombre y correo electrónico",
+  "Email": "Correo electrónico",
+  "Save": "Guardar",
+
+  "Security": "Seguridad",
+  "Security settings": "Configuración de seguridad",
+  "Update password": "Actualizar contraseña",
+  "Ensure your account is using a long, random password to stay secure": "Asegúrese de que su cuenta use una contraseña larga y aleatoria para mantenerse segura",
+  "Current password": "Contraseña actual",
+  "New password": "Contraseña nueva",
+
+  "Appearance": "Apariencia",
+  "Appearance settings": "Configuración de apariencia",
+  "Update the appearance settings for your account": "Actualice la configuración de apariencia de su cuenta",
+  "Light": "Claro",
+  "Dark": "Oscuro",
+
+  "Delete account": "Eliminar cuenta",
+  "Delete your account and all of its resources": "Elimine su cuenta y todos sus recursos",
+  "Are you sure you want to delete your account?": "¿Está seguro de que desea eliminar su cuenta?",
+  "Once your account is deleted, all of its resources and data will be permanently deleted. Please enter your password to confirm you would like to permanently delete your account.": "Una vez eliminada su cuenta, todos sus recursos y datos se borrarán de forma permanente. Ingrese su contraseña para confirmar que desea eliminarla definitivamente.",
+  "Manage your profile and account settings": "Administre su perfil y la configuración de su cuenta",
+
+  "Dashboard": "Panel",
+  "Platform": "Plataforma",
+  "Repository": "Repositorio",
+  "Documentation": "Documentación",
+  "Welcome": "Bienvenido",
+
+  "OK": "Aceptar",
+  "Records per page": "Registros por página"
 }
