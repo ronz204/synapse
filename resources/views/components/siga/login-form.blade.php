@@ -5,6 +5,8 @@
 --}}
 <x-auth-session-status class="mb-4 text-center" :status="session('status')" />
 
+<x-passkey-verify />
+
 @if ($errors->any())
     <div class="mb-4 text-sm text-status-danger text-center">{{ __('These credentials do not match our records.') }}</div>
 @endif

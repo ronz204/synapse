@@ -49,6 +49,8 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::registerView(fn () => view('livewire.auth.register'));
         Fortify::resetPasswordView(fn () => view('livewire.auth.reset-password'));
         Fortify::requestPasswordResetLinkView(fn () => view('livewire.auth.forgot-password'));
+        Fortify::twoFactorChallengeView(fn () => view('livewire.auth.two-factor-challenge'));
+        Fortify::confirmPasswordView(fn () => view('livewire.auth.confirm-password'));
     }
 
     /**
@@ -66,5 +68,12 @@ class FortifyServiceProvider extends ServiceProvider
             return Limit::perMinute(5)->by($throttleKey);
         });
 
+        RateLimiter::for('passkeys', function (Request $request) {
+            $credentialId = $request->input('credential.id');
+
+            return Limit::perMinute(10)->by(
+                ($credentialId ?: $request->session()->getId()).'|'.$request->ip(),
+            );
+        });
     }
 }
