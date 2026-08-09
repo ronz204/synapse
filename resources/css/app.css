@@ -182,6 +182,20 @@ select:focus[data-flux-control] {
 } */
 
 /* ==========================================================================
+   Public landing.
+   ========================================================================== */
+
+@layer components {
+
+    /* Dotted ground behind the hero, from the approved landing design. */
+    .landing-canvas {
+        background-color: var(--color-background-page);
+        background-image: radial-gradient(circle, var(--color-border-default) 1px, transparent 1px);
+        background-size: 22px 22px;
+    }
+}
+
+/* ==========================================================================
    Dashboard shell — sidebar, topbar and the frame that holds them.
 
    Ported from SIGA-UTN. Every colour goes through the semantic aliases above

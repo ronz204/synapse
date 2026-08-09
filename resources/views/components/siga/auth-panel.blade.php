@@ -14,7 +14,9 @@
             <div class="font-black text-lg text-text-inverse">{{ $heading ?? __('National Technical University') }}</div>
         </div>
 
-        <div class="w-16 h-16 rounded-full bg-background-surface border-4 border-background-surface -mt-8 mx-auto flex items-center justify-center relative shadow-[0_4px_10px_rgba(11,61,120,0.15)] overflow-hidden">
+        {{-- The medallion stays white in both themes: the UTN mark is dark ink and
+             all but disappears against the dark-mode surface. --}}
+        <div class="w-16 h-16 rounded-full bg-neutral-0 border-4 border-neutral-0 -mt-8 mx-auto flex items-center justify-center relative shadow-[0_4px_10px_rgba(11,61,120,0.15)] overflow-hidden">
             <img src="{{ asset('images/logo-utn.avif') }}" alt="UTN" class="w-[70%] h-[70%] object-contain">
         </div>
 
