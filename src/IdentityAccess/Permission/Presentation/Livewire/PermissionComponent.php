@@ -8,6 +8,7 @@ use App\Livewire\Concerns\InteractsWithDataTable;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Src\IdentityAccess\Permission\Application\UseCases\CreatePermissionUseCase;
 use Src\IdentityAccess\Permission\Application\UseCases\DeletePermissionUseCase;
@@ -17,6 +18,7 @@ use Src\IdentityAccess\Permission\Application\UseCases\UpdatePermissionUseCase;
 use Src\IdentityAccess\Permission\Domain\Entities\Permission;
 use Src\IdentityAccess\Permission\Presentation\Livewire\Forms\PermissionForm;
 
+#[Layout('layouts.dashboard', ['title' => 'Permissions', 'subtitle' => 'Permissions management assigned to each role'])]
 class PermissionComponent extends Component
 {
     use AuthorizesRequests;
@@ -114,11 +116,7 @@ class PermissionComponent extends Component
             ? $this->renderServerMode($useCase)
             : $this->renderClientMode($useCase);
 
-        /** @disregard P1013 Livewire registra ->layout() como macro en runtime sobre Illuminate\View\View */
-        return $view->layout('layouts.dashboard', [
-            'title' => __('Permissions'),
-            'subtitle' => __('Permissions management assigned to each role'),
-        ]);
+        return $view;
     }
 
     private function renderClientMode(ListPermissionsUseCase $useCase): View

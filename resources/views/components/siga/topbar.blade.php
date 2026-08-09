@@ -13,8 +13,11 @@
             {{-- Rendered from the page's own ->layout(..., ['title' => ..., 'subtitle' => ...])
                  call, not from Alpine state. Alpine state survives a wire:navigate morph, so a
                  client-side title map goes stale on every real navigation. --}}
-            <div class="title">{{ $title ?? __('Main Panel') }}</div>
-            <div class="subtitle">{{ $subtitle ?? __('General overview of the academic system') }}</div>
+            {{-- Values arrive as translation keys, not finished strings: Livewire's
+                 #[Layout] attribute only accepts constant expressions, so __() cannot
+                 run at the call site and happens here instead. --}}
+            <div class="title">{{ __($title ?? 'Main Panel') }}</div>
+            <div class="subtitle">{{ __($subtitle ?? 'General overview of the academic system') }}</div>
         </div>
     </div>
 

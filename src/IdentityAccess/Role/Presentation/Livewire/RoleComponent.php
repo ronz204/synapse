@@ -8,6 +8,7 @@ use App\Livewire\Concerns\InteractsWithDataTable;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Src\IdentityAccess\Permission\Application\UseCases\ListPermissionsUseCase;
 use Src\IdentityAccess\Permission\Domain\Entities\Permission;
@@ -21,6 +22,7 @@ use Src\IdentityAccess\Role\Domain\Entities\Role;
 use Src\IdentityAccess\Role\Domain\Exceptions\RoleIsProtectedException;
 use Src\IdentityAccess\Role\Presentation\Livewire\Forms\RoleForm;
 
+#[Layout('layouts.dashboard', ['title' => 'Roles', 'subtitle' => 'System user roles management'])]
 class RoleComponent extends Component
 {
     use AuthorizesRequests;
@@ -139,11 +141,7 @@ class RoleComponent extends Component
 
         $view = $view->with('permissionCatalog', $this->permissionCatalog($permissionsUseCase));
 
-        /** @disregard P1013 Livewire registra ->layout() como macro en runtime sobre Illuminate\View\View */
-        return $view->layout('layouts.dashboard', [
-            'title' => __('Roles'),
-            'subtitle' => __('System user roles management'),
-        ]);
+        return $view;
     }
 
     /**
