@@ -166,3 +166,650 @@ select:focus[data-flux-control] {
 /* \[:where(&)\]:size-4 {
     @apply size-4;
 } */
+
+/* ==========================================================================
+   Dashboard shell — sidebar, topbar and the frame that holds them.
+
+   Ported from SIGA-UTN. Every colour goes through the semantic aliases above
+   instead of the flat custom properties the original used, so both themes come
+   from one source. The class names are the original ones (.sidebar, .nav-item,
+   .topbar, .title...) to keep later views portable; they are global, so treat
+   them as reserved.
+   ========================================================================== */
+
+@layer components {
+
+    /* Accessibility zoom, driven by the font-size switch in the topbar. */
+    :root {
+        --font-zoom: 1;
+    }
+
+    ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: color-mix(in srgb, var(--color-text-brand) 35%, transparent);
+        border-radius: 8px;
+    }
+
+    .app {
+        display: flex;
+        min-height: 100vh;
+        width: 100%;
+        background: var(--color-background-page);
+        color: var(--color-text-primary);
+        transition: background 0.2s;
+        position: relative;
+        zoom: var(--font-zoom);
+    }
+
+    .backdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: color-mix(in srgb, var(--color-neutral-950) 55%, transparent);
+        z-index: 39;
+    }
+
+    .backdrop.show {
+        display: block;
+    }
+
+    /* ---------- sidebar ---------- */
+
+    .sidebar {
+        width: 260px;
+        flex-shrink: 0;
+        background: var(--color-background-surface);
+        border-right: 1px solid var(--color-border-default);
+        display: flex;
+        flex-direction: column;
+        padding: 20px 14px;
+        gap: 22px;
+    }
+
+    .sidebar.collapsed {
+        width: 76px;
+    }
+
+    .sidebar.collapsed:hover {
+        width: 260px;
+        box-shadow: var(--shadow-elevation-3);
+        position: relative;
+        z-index: 30;
+    }
+
+    .sidebar.collapsed [data-labels] {
+        display: none;
+    }
+
+    .sidebar.collapsed:hover [data-labels] {
+        display: flex;
+    }
+
+    .sidebar.collapsed .nav-text,
+    .sidebar.collapsed .nav-label {
+        display: none;
+    }
+
+    .sidebar.collapsed:hover .nav-text,
+    .sidebar.collapsed:hover .nav-label {
+        display: inline;
+    }
+
+    .sidebar.collapsed .logo-row {
+        justify-content: center;
+        padding: 0;
+    }
+
+    .sidebar.collapsed:hover .logo-row {
+        justify-content: flex-start;
+        padding: 0 6px;
+    }
+
+    .sidebar.collapsed .logo-img {
+        width: 30px;
+    }
+
+    .sidebar.collapsed:hover .logo-img {
+        width: 42px;
+    }
+
+    .sidebar.collapsed .nav-item,
+    .sidebar.collapsed .nav-parent {
+        justify-content: center;
+        padding: 11px 0;
+    }
+
+    .sidebar.collapsed:hover .nav-item,
+    .sidebar.collapsed:hover .nav-parent {
+        justify-content: flex-start;
+        padding: 11px 14px;
+    }
+
+    .logo-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0 6px;
+        min-width: 0;
+    }
+
+    .logo-wrap {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    /* The UTN mark is a dark-ink logo, so it needs its own light plate to stay
+       legible once the sidebar goes dark. */
+    .dark .logo-wrap {
+        background: var(--color-neutral-0);
+        border-radius: 8px;
+        padding: 5px 6px;
+    }
+
+    .dark .sidebar.collapsed .logo-wrap {
+        padding: 4px;
+    }
+
+    .dark .sidebar.collapsed:hover .logo-wrap {
+        padding: 5px 6px;
+    }
+
+    .logo-img {
+        width: 42px;
+        height: auto;
+        object-fit: contain;
+        display: block;
+    }
+
+    .logo-text {
+        display: flex;
+        flex-direction: column;
+        line-height: 1.2;
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    .logo-title {
+        font-size: 14px;
+        font-weight: 800;
+        color: var(--color-text-primary);
+        letter-spacing: 0.2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .logo-sub {
+        font-size: 11px;
+        color: var(--color-text-tertiary);
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* ---------- navigation ---------- */
+
+    .nav-scroll {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        overflow-y: auto;
+    }
+
+    .nav-group {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .nav-label {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--color-text-tertiary);
+        letter-spacing: 0.6px;
+        padding: 0 12px;
+        margin-bottom: 2px;
+    }
+
+    .nav-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 11px 14px;
+        border-radius: 10px;
+        cursor: pointer;
+        font-size: 14.5px;
+        font-weight: 500;
+        color: var(--color-text-secondary);
+        background: transparent;
+        border-left: 3px solid transparent;
+        transition: background 0.15s;
+    }
+
+    .nav-item.active {
+        font-weight: 600;
+        color: var(--color-text-brand);
+        background: var(--color-background-brand-subtle);
+        border-left-color: var(--color-background-brand-default);
+    }
+
+    .nav-item:not(.active):hover,
+    .nav-child:not(.active):hover {
+        background: var(--color-background-brand-subtle);
+        opacity: 0.7;
+    }
+
+    .nav-item svg {
+        flex-shrink: 0;
+    }
+
+    .nav-text {
+        flex: 1;
+    }
+
+    .nav-chevron {
+        flex-shrink: 0;
+    }
+
+    .chevron-toggle {
+        transition: transform 0.15s;
+        transform: rotate(-90deg);
+    }
+
+    .chevron-toggle.open {
+        transform: rotate(0deg);
+    }
+
+    .nav-children {
+        display: none;
+        flex-direction: column;
+        gap: 2px;
+        padding-left: 18px;
+    }
+
+    .nav-children.open {
+        display: flex;
+    }
+
+    .nav-child {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--color-text-secondary);
+    }
+
+    .nav-child.active {
+        font-weight: 600;
+        color: var(--color-text-brand);
+        background: var(--color-background-brand-subtle);
+    }
+
+    /* ---------- topbar ---------- */
+
+    .main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+    }
+
+    .topbar {
+        height: 64px;
+        flex-shrink: 0;
+        background: var(--color-background-surface);
+        border-bottom: 1px solid var(--color-border-default);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 24px;
+        position: relative;
+        z-index: 20;
+    }
+
+    .topbar-left {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        min-width: 0;
+    }
+
+    .topbar-right {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        flex-shrink: 0;
+        flex-wrap: nowrap;
+    }
+
+    .icon-btn {
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        color: var(--color-text-secondary);
+        flex-shrink: 0;
+    }
+
+    .icon-btn.round {
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
+        background: var(--color-background-brand-subtle);
+        color: var(--color-text-brand);
+    }
+
+    .title-wrap {
+        min-width: 0;
+    }
+
+    .title {
+        font-size: 17px;
+        font-weight: 800;
+        color: var(--color-text-primary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .subtitle {
+        font-size: 12.5px;
+        color: var(--color-text-tertiary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* ---------- font-size switch ---------- */
+
+    .font-switch {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        background: var(--color-background-brand-subtle);
+        border-radius: 10px;
+        padding: 3px;
+    }
+
+    .font-btn {
+        padding: 5px 8px;
+        border-radius: 7px;
+        font-size: 11px;
+        font-weight: 700;
+        cursor: pointer;
+        color: var(--color-text-brand);
+    }
+
+    .font-btn.active {
+        color: var(--color-text-inverse);
+        background: var(--color-background-brand-default);
+    }
+
+    /* ---------- profile menu ---------- */
+
+    .profile-wrap {
+        position: relative;
+    }
+
+    .profile-btn {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        cursor: pointer;
+        padding: 4px 6px;
+        border-radius: 10px;
+    }
+
+    .avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: var(--color-background-brand-default);
+        color: var(--color-text-inverse);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        font-weight: 700;
+        flex-shrink: 0;
+        overflow: hidden;
+    }
+
+    .avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .profile-chevron {
+        stroke: var(--color-text-secondary);
+        flex-shrink: 0;
+        transition: transform 0.15s;
+    }
+
+    .profile-chevron.open {
+        transform: rotate(180deg);
+    }
+
+    .profile-menu {
+        display: none;
+        position: absolute;
+        top: 48px;
+        right: 0;
+        width: min(240px, calc(100vw - 28px));
+        background: var(--color-background-surface);
+        border: 1px solid var(--color-border-default);
+        border-radius: 12px;
+        box-shadow: var(--shadow-elevation-3);
+        overflow: hidden;
+    }
+
+    .profile-menu.open {
+        display: block;
+    }
+
+    .profile-head {
+        padding: 16px;
+        background: var(--color-background-brand-default);
+        color: var(--color-text-inverse);
+    }
+
+    .profile-name {
+        font-size: 14.5px;
+        font-weight: 700;
+    }
+
+    .profile-role {
+        font-size: 12px;
+        opacity: 0.85;
+    }
+
+    .profile-items {
+        padding: 6px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .profile-item {
+        padding: 10px 12px;
+        border-radius: 8px;
+        font-size: 13.5px;
+        color: var(--color-text-primary);
+        cursor: pointer;
+    }
+
+    .profile-item:hover {
+        background: var(--color-background-subtle);
+    }
+
+    .profile-divider {
+        height: 1px;
+        background: var(--color-border-default);
+        margin: 4px 0;
+    }
+
+    .profile-item.logout {
+        color: var(--color-status-danger);
+    }
+
+    /* ---------- content and footer ---------- */
+
+    .content {
+        flex: 1;
+        overflow: auto;
+        padding: 26px 28px 40px;
+    }
+
+    .app-footer {
+        flex-shrink: 0;
+        padding: 14px 24px;
+        border-top: 1px solid var(--color-border-default);
+        background: var(--color-background-surface);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 8px;
+        font-size: 12.5px;
+        color: var(--color-text-tertiary);
+    }
+
+    /* ---------- responsive ---------- */
+
+    @media (max-width: 1024px) and (min-width: 760px) {
+        .sidebar {
+            width: 220px;
+        }
+
+        .sidebar.collapsed {
+            width: 72px;
+        }
+
+        .sidebar.collapsed:hover {
+            width: 240px;
+        }
+    }
+
+    @media (max-width: 759px) {
+
+        .sidebar,
+        .sidebar.collapsed {
+            position: fixed;
+            top: 0;
+            left: -280px;
+            height: 100vh;
+            width: 260px;
+            z-index: 40;
+            transition: left 0.2s;
+            box-shadow: none;
+        }
+
+        .sidebar.mobile-open,
+        .sidebar.collapsed.mobile-open {
+            left: 0;
+            box-shadow: var(--shadow-elevation-3);
+        }
+
+        .sidebar [data-labels],
+        .sidebar.collapsed [data-labels] {
+            display: flex;
+        }
+
+        .sidebar .nav-text,
+        .sidebar .nav-label,
+        .sidebar.collapsed .nav-text,
+        .sidebar.collapsed .nav-label {
+            display: inline;
+        }
+
+        .sidebar .nav-item,
+        .sidebar .nav-parent,
+        .sidebar.collapsed .nav-item,
+        .sidebar.collapsed .nav-parent {
+            justify-content: flex-start;
+            padding: 11px 14px;
+        }
+
+        .sidebar .logo-row,
+        .sidebar.collapsed .logo-row {
+            justify-content: flex-start;
+            padding: 0 6px;
+        }
+
+        .sidebar .logo-img,
+        .sidebar.collapsed .logo-img {
+            width: 42px;
+        }
+
+        .icon-btn,
+        .icon-btn.round {
+            width: 44px;
+            height: 44px;
+        }
+
+        .font-btn {
+            padding: 8px 10px;
+        }
+
+        .subtitle {
+            display: none;
+        }
+
+        .topbar {
+            padding: 0 14px;
+        }
+
+        .topbar-right {
+            gap: 8px;
+        }
+
+        .logo-title {
+            font-size: 13px;
+        }
+
+        .content {
+            padding: 16px 14px 28px;
+        }
+
+        .app-footer {
+            padding: 14px;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
+        }
+    }
+
+    @media (max-width: 380px) {
+        .topbar-right {
+            gap: 6px;
+        }
+
+        .font-switch {
+            padding: 2px;
+        }
+
+        .font-btn {
+            padding: 7px 7px;
+            font-size: 10px;
+        }
+
+        .avatar {
+            width: 32px;
+            height: 32px;
+        }
+    }
+}
