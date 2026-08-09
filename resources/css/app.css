@@ -9,7 +9,7 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-    --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 
     --color-zinc-50: #fafafa;
     --color-zinc-100: #f5f5f5;
@@ -32,29 +32,37 @@
        Primitives are a source for the semantic aliases below; components should
        reference the semantic names, not these directly.
        ========================================================================== */
-    --color-brand-50: #eff6ff;
-    --color-brand-100: #dbeafe;
-    --color-brand-200: #bfdbfe;
-    --color-brand-300: #93c5fd;
-    --color-brand-400: #60a5fa;
-    --color-brand-500: #3b82f6;
-    --color-brand-600: #2563eb;
-    --color-brand-700: #1d4ed8;
-    --color-brand-800: #1e40af;
-    --color-brand-900: #1e3a8a;
-    --color-brand-950: #172554;
+    /* Brand ramp built from the SIGA-UTN institutional blue. The anchors come
+       straight from that palette: 100 is its soft brand fill, 400 its dark-mode
+       accent, 600 its hover, 700 its primary. 950 intentionally reads lighter
+       than 900 — it is SIGA's dark-mode soft brand surface, which sits off the
+       ramp rather than continuing it. */
+    --color-brand-50: #eff5fd;
+    --color-brand-100: #dce7fa;
+    --color-brand-200: #c3d6f6;
+    --color-brand-300: #9fbcf0;
+    --color-brand-400: #82acf7;
+    --color-brand-500: #4a7fd0;
+    --color-brand-600: #16549e;
+    --color-brand-700: #0b3c8c;
+    --color-brand-800: #0a3175;
+    --color-brand-900: #0b2a5c;
+    --color-brand-950: #1c3564;
 
+    /* Neutrals carry SIGA-UTN's blue-tinted greys. 0-200 are its light surfaces
+       and borders, 300-500 its muted text, 700-950 its dark-mode chrome. */
     --color-neutral-0: #ffffff;
-    --color-neutral-50: #f8fafc;
-    --color-neutral-100: #f1f5f9;
-    --color-neutral-200: #e2e8f0;
-    --color-neutral-300: #cbd5e1;
-    --color-neutral-400: #94a3b8;
-    --color-neutral-500: #64748b;
-    --color-neutral-600: #475569;
-    --color-neutral-700: #334155;
-    --color-neutral-800: #1e293b;
-    --color-neutral-900: #0f172a;
+    --color-neutral-50: #f7faff;
+    --color-neutral-100: #eef2f9;
+    --color-neutral-200: #e4e9f5;
+    --color-neutral-300: #c3d1ec;
+    --color-neutral-400: #93a4c7;
+    --color-neutral-500: #8a97ad;
+    --color-neutral-600: #5b6b87;
+    --color-neutral-700: #2e4470;
+    --color-neutral-800: #101f3e;
+    --color-neutral-900: #0b1b33;
+    --color-neutral-950: #060d1c;
 
     --color-status-danger: #dc2626;
     --color-status-warning: #d97706;
@@ -68,9 +76,11 @@
     --color-accent-orange: #ea580c;
 
     /* Semantic color — 28 aliases. Always reach for these in components. */
-    --color-background-page: var(--color-neutral-50);
+    /* In SIGA's design the page sits a shade deeper than the tinted fills used
+       inside cards, so page and subtle are swapped relative to the ramp order. */
+    --color-background-page: var(--color-neutral-100);
     --color-background-surface: var(--color-neutral-0);
-    --color-background-subtle: var(--color-neutral-100);
+    --color-background-subtle: var(--color-neutral-50);
     --color-background-inverse: var(--color-neutral-900);
     --color-background-disabled: var(--color-neutral-100);
     --color-background-brand-default: var(--color-brand-700);
@@ -103,7 +113,7 @@
         --color-accent-content: var(--color-white);
         --color-accent-foreground: var(--color-neutral-800);
 
-        --color-background-page: var(--color-neutral-900);
+        --color-background-page: var(--color-neutral-950);
         --color-background-surface: var(--color-neutral-800);
         --color-background-subtle: var(--color-neutral-700);
         --color-background-inverse: var(--color-neutral-0);
