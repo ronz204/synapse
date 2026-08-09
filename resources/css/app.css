@@ -64,14 +64,17 @@
     --color-neutral-900: #0b1b33;
     --color-neutral-950: #060d1c;
 
-    --color-status-danger: #dc2626;
-    --color-status-warning: #d97706;
-    --color-status-success: #16a34a;
-    --color-status-info: #2563eb;
-    --color-status-danger-subtle: #fef2f2;
-    --color-status-warning-subtle: #fffbeb;
-    --color-status-success-subtle: #f0fdf4;
-    --color-status-info-subtle: #eff6ff;
+    /* Status colours also come from SIGA-UTN, where they carry real meaning:
+       warning is the edit action, danger the delete action and the sign-out
+       link, success the confirmation state, info the system badge. */
+    --color-status-danger: #b42318;
+    --color-status-warning: #93650b;
+    --color-status-success: #4a8f3c;
+    --color-status-info: #1a3868;
+    --color-status-danger-subtle: #fde7e7;
+    --color-status-warning-subtle: #fff3d6;
+    --color-status-success-subtle: #e6f0e2;
+    --color-status-info-subtle: #e2e8f2;
 
     --color-accent-orange: #ea580c;
 
@@ -135,6 +138,17 @@
         --color-border-brand: var(--color-brand-500);
         --color-border-focus: var(--color-brand-400);
         --color-border-disabled: var(--color-neutral-700);
+
+        /* Status colours need their own dark values: the light ones are tuned
+           for a white ground and turn illegible on a dark surface. */
+        --color-status-danger: #ff8686;
+        --color-status-warning: #f2c063;
+        --color-status-success: #7fd28f;
+        --color-status-info: #a9c0ec;
+        --color-status-danger-subtle: #3a1620;
+        --color-status-warning-subtle: #3a2c0e;
+        --color-status-success-subtle: #16321f;
+        --color-status-info-subtle: #1c2c4d;
     }
 }
 
@@ -810,6 +824,319 @@ select:focus[data-flux-control] {
         .avatar {
             width: 32px;
             height: 32px;
+        }
+    }
+}
+
+/* ==========================================================================
+   Shared UI — row actions, modal chrome and the delete confirmation overlay.
+
+   These are library pieces: they render nothing on their own and only come
+   alive inside a CRUD screen that supplies the Livewire and Alpine state they
+   expect. Ported from SIGA-UTN, recoloured through the semantic aliases.
+   ========================================================================== */
+
+@layer components {
+
+    /* ---------- row actions ---------- */
+
+    .action-icon {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        border: none;
+        flex-shrink: 0;
+    }
+
+    .action-icon.edit {
+        background: var(--color-status-warning-subtle);
+        color: var(--color-status-warning);
+    }
+
+    .action-icon.delete {
+        background: var(--color-status-danger-subtle);
+        color: var(--color-status-danger);
+    }
+
+    /* ---------- modal chrome ---------- */
+
+    .modal-backdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: color-mix(in srgb, var(--color-neutral-950) 50%, transparent);
+        z-index: 60;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+
+    .modal-backdrop.open {
+        display: flex;
+    }
+
+    .modal {
+        background: var(--color-background-surface);
+        border-radius: 14px;
+        width: 100%;
+        max-width: 520px;
+        max-height: 90vh;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 24px 60px color-mix(in srgb, var(--color-neutral-950) 30%, transparent);
+    }
+
+    .modal-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 18px 22px;
+        border-bottom: 1px solid var(--color-border-default);
+    }
+
+    .modal-title {
+        font-size: 17px;
+        font-weight: 800;
+        color: var(--color-text-primary);
+    }
+
+    .modal-close {
+        width: 30px;
+        height: 30px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        color: var(--color-text-tertiary);
+        border: none;
+        background: transparent;
+    }
+
+    .modal-close:hover {
+        background: var(--color-background-subtle);
+        color: var(--color-text-primary);
+    }
+
+    .modal-body {
+        padding: 20px 22px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+    }
+
+    .modal-footer {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 10px;
+        padding: 16px 22px;
+        border-top: 1px solid var(--color-border-default);
+    }
+
+    /* ---------- delete confirmation ----------
+
+       This overlay keeps its own palette on purpose: SIGA-UTN treats it as a
+       deliberately louder, attention-grabbing surface rather than part of the
+       institutional theme. The values are the originals, split per theme. */
+
+    :root {
+        --del-warn-ring: #f8bb86;
+        --del-confirm-bg: #3085d6;
+        --del-confirm-bg-hover: #2a75bd;
+        --del-cancel-bg: #dc3545;
+        --del-cancel-bg-hover: #c62838;
+        --del-ok-bg: #6e6fed;
+        --del-ok-bg-hover: #5c5de0;
+    }
+
+    .dark {
+        --del-warn-ring: #d99a5b;
+        --del-confirm-bg: #3f8fdc;
+        --del-confirm-bg-hover: #5b9fe0;
+        --del-cancel-bg: #e3495c;
+        --del-cancel-bg-hover: #ea6b7b;
+        --del-ok-bg: #8586f2;
+        --del-ok-bg-hover: #9d9ef5;
+    }
+
+    @keyframes del-fade-in {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    @keyframes del-scale-in {
+        from {
+            opacity: 0;
+            transform: translateY(-12px) scale(0.97);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    @keyframes del-check-line {
+        from { stroke-dashoffset: 60; }
+        to { stroke-dashoffset: 0; }
+    }
+
+    .del-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: color-mix(in srgb, var(--color-neutral-950) 55%, transparent);
+        z-index: 70;
+        align-items: center;
+        justify-content: center;
+        padding: 12px;
+    }
+
+    .del-overlay.open {
+        display: flex;
+        animation: del-fade-in 0.15s ease-out;
+    }
+
+    .del-card {
+        background: var(--color-background-surface);
+        border-radius: 10px;
+        width: 100%;
+        max-width: 420px;
+        padding: 36px 32px 32px;
+        text-align: center;
+        box-shadow: 0 20px 60px color-mix(in srgb, var(--color-neutral-950) 25%, transparent);
+        animation: del-scale-in 0.18s ease-out;
+    }
+
+    .del-icon-warn {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        border: 3px solid var(--del-warn-ring);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px;
+        font-size: 38px;
+        font-weight: 600;
+        color: var(--del-warn-ring);
+        line-height: 1;
+    }
+
+    .del-icon-success {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: var(--color-status-success-subtle);
+        color: var(--color-status-success);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px;
+    }
+
+    .del-icon-success path {
+        animation: del-check-line 0.35s ease-out 0.1s both;
+    }
+
+    .del-title {
+        font-size: 24px;
+        font-weight: 600;
+        color: var(--color-text-primary);
+        margin: 0 0 10px;
+    }
+
+    .del-text {
+        font-size: 15px;
+        color: var(--color-text-secondary);
+        margin: 0 0 26px;
+    }
+
+    .del-actions {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+    }
+
+    .del-btn-confirm,
+    .del-btn-cancel,
+    .del-btn-ok {
+        color: var(--color-text-inverse);
+        border: none;
+        border-radius: 6px;
+        padding: 11px 22px;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: inherit;
+    }
+
+    .del-btn-confirm {
+        background: var(--del-confirm-bg);
+        min-width: 130px;
+    }
+
+    .del-btn-confirm:hover {
+        background: var(--del-confirm-bg-hover);
+    }
+
+    .del-btn-cancel {
+        background: var(--del-cancel-bg);
+        min-width: 110px;
+    }
+
+    .del-btn-cancel:hover {
+        background: var(--del-cancel-bg-hover);
+    }
+
+    .del-btn-ok {
+        background: var(--del-ok-bg);
+        padding-inline: 34px;
+    }
+
+    .del-btn-ok:hover {
+        background: var(--del-ok-bg-hover);
+    }
+
+    @media (max-width: 759px) {
+        .modal {
+            max-width: 100%;
+            max-height: 100vh;
+            border-radius: 0;
+        }
+
+        .modal-backdrop {
+            padding: 0;
+        }
+
+        .modal-body {
+            padding: 16px;
+        }
+
+        .modal-head,
+        .modal-footer {
+            padding: 14px 16px;
+        }
+
+        .modal-footer .del-btn-confirm,
+        .modal-footer .del-btn-cancel {
+            flex: 1;
+            justify-content: center;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+
+        .del-overlay.open,
+        .del-card,
+        .del-icon-success path {
+            animation: none;
         }
     }
 }
