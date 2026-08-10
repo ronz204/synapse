@@ -5,7 +5,14 @@ use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Livewire\Livewire;
 
-beforeEach(function () {});
+/**
+ * The security screen sits behind the password.confirm middleware, so a session
+ * that has not confirmed recently is redirected away. These tests are about what
+ * the screen renders, not about the gate, so they start already confirmed.
+ */
+beforeEach(function () {
+    $this->withSession(['auth.password_confirmed_at' => time()]);
+});
 
 test('security settings page can be rendered', function () {
     $user = User::factory()->create();
