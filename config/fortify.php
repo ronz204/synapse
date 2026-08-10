@@ -116,6 +116,8 @@ return [
 
     'limiters' => [
         'login' => 'login',
+        'two-factor' => 'two-factor',
+        'passkeys' => 'passkeys',
     ],
 
     /*
@@ -133,6 +135,24 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Passkeys
+    |--------------------------------------------------------------------------
+    |
+    | These settings configure Fortify's passkey (WebAuthn) support. The relying
+    | party is derived from APP_URL, so it must match the host the browser is
+    | actually on — a passkey registered on one host will not verify on another.
+    |
+    */
+
+    'passkeys' => [
+        'relying_party_id' => parse_url((string) config('app.url'), PHP_URL_HOST),
+        'allowed_origins' => [config('app.url')],
+        'user_handle_secret' => env('PASSKEYS_USER_HANDLE_SECRET', config('app.key')),
+        'timeout' => 60000,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Features
     |--------------------------------------------------------------------------
     |
@@ -145,6 +165,11 @@ return [
     'features' => [
         Features::registration(),
         Features::resetPasswords(),
+        Features::twoFactorAuthentication([
+            'confirm' => true,
+            'confirmPassword' => true,
+        ]),
+        Features::passkeys(),
     ],
 
 ];

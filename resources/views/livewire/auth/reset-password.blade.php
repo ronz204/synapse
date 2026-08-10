@@ -1,54 +1,43 @@
-<x-layouts::auth :title="__('Reset password')">
-    <div class="flex flex-col gap-6">
-        <x-auth-header :title="__('Reset password')" :description="__('Please enter your new password below')" />
+<x-layouts::auth.siga :title="__('Reset password')">
+    <h2 class="text-xl font-bold text-text-primary mb-1 text-center">{{ __('Reset password') }}</h2>
+    <p class="text-[13.5px] text-text-secondary mb-6 text-center">{{ __('Please enter your new password below') }}</p>
 
-        <!-- Session Status -->
-        <x-auth-session-status class="text-center" :status="session('status')" />
+    <x-auth-session-status class="mb-4 text-center" :status="session('status')" />
 
-        <form method="POST" action="{{ route('password.update') }}" class="flex flex-col gap-6">
-            @csrf
-            <!-- Token -->
-            <input type="hidden" name="token" value="{{ request()->route('token') }}">
+    <form method="POST" action="{{ route('password.update') }}" class="flex flex-col gap-4">
+        @csrf
 
-            <!-- Email Address -->
-            <flux:input
-                name="email"
-                value="{{ request('email') }}"
-                :label="__('Email')"
-                type="email"
-                required
-                autocomplete="email"
-            />
+        <input type="hidden" name="token" value="{{ request()->route('token') }}">
 
-            <!-- Password -->
-            <flux:input
-                name="password"
-                :label="__('Password')"
-                type="password"
-                required
-                autocomplete="new-password"
-                :placeholder="__('Password')"
-                passwordrules="{{ \Illuminate\Validation\Rules\Password::defaults()->toPasswordRulesString() }}"
-                viewable
-            />
+        <x-siga.field
+            name="email"
+            type="email"
+            :label="__('Email address')"
+            :value="request('email')"
+            required
+            autocomplete="email" />
 
-            <!-- Confirm Password -->
-            <flux:input
-                name="password_confirmation"
-                :label="__('Confirm password')"
-                type="password"
-                required
-                autocomplete="new-password"
-                :placeholder="__('Confirm password')"
-                passwordrules="{{ \Illuminate\Validation\Rules\Password::defaults()->toPasswordRulesString() }}"
-                viewable
-            />
+        <x-siga.field
+            name="password"
+            type="password"
+            :label="__('Password')"
+            :rules="\Illuminate\Validation\Rules\Password::defaults()->toPasswordRulesString()"
+            required
+            autofocus
+            autocomplete="new-password"
+            placeholder="••••••••" />
 
-            <div class="flex items-center justify-end">
-                <flux:button type="submit" variant="primary" class="w-full" data-test="reset-password-button">
-                    {{ __('Reset password') }}
-                </flux:button>
-            </div>
-        </form>
-    </div>
-</x-layouts::auth>
+        <x-siga.field
+            name="password_confirmation"
+            type="password"
+            :label="__('Confirm password')"
+            :rules="\Illuminate\Validation\Rules\Password::defaults()->toPasswordRulesString()"
+            required
+            autocomplete="new-password"
+            placeholder="••••••••" />
+
+        <button type="submit" class="mt-1 bg-background-brand-default hover:bg-background-brand-hover text-text-inverse py-3 rounded-lg text-[15px] font-bold transition-colors">
+            {{ __('Reset password') }}
+        </button>
+    </form>
+</x-layouts::auth.siga>

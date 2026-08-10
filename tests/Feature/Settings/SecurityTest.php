@@ -5,7 +5,14 @@ use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Livewire\Livewire;
 
-beforeEach(function () {});
+/**
+ * The security screen sits behind the password.confirm middleware, so a session
+ * that has not confirmed recently is redirected away. These tests are about what
+ * the screen renders, not about the gate, so they start already confirmed.
+ */
+beforeEach(function () {
+    $this->withSession(['auth.password_confirmed_at' => time()]);
+});
 
 test('security settings page can be rendered', function () {
     $user = User::factory()->create();
@@ -21,13 +28,16 @@ test('security settings page renders without two factor when feature is disabled
 
     $user = User::factory()->create();
 
+    // Asserted through __() rather than as literals: the application runs in
+    // Spanish, so hard-coded English would pass the assertDontSee checks for the
+    // wrong reason — the strings would be absent because nothing is in English.
     $this->actingAs($user)
         ->get(route('security.edit'))
         ->assertOk()
-        ->assertSee('Update password')
-        ->assertDontSee('Manage your passkeys for passwordless sign-in')
-        ->assertDontSee('Add a passkey to sign in without a password')
-        ->assertDontSee('Two-factor authentication');
+        ->assertSee(__('Update password'))
+        ->assertDontSee(__('Manage your passkeys for passwordless sign-in'))
+        ->assertDontSee(__('Add a passkey to sign in without a password'))
+        ->assertDontSee(__('Two-factor authentication'));
 });
 
 test('password can be updated', function () {
