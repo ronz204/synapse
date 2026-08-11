@@ -16,6 +16,10 @@ use Src\IdentityAccess\Role\Domain\Contracts\RoleRepositoryInterface;
 use Src\IdentityAccess\Role\Domain\Entities\Role;
 use Src\IdentityAccess\Role\Infrastructure\Persistence\Repositories\EloquentRoleRepository;
 use Src\IdentityAccess\Role\Presentation\Policies\RolePolicy;
+use Src\Shared\Export\Contracts\ExcelExporterInterface;
+use Src\Shared\Export\Contracts\PdfExporterInterface;
+use Src\Shared\Export\Infrastructure\SpatieExcelExporter;
+use Src\Shared\Export\Infrastructure\SpatiePdfExporter;
 
 /**
  * Wires the bounded contexts under src/ into the framework: each domain port is
@@ -32,6 +36,12 @@ final class DomainServiceProvider extends ServiceProvider
     private array $domainBindings = [
         RoleRepositoryInterface::class => EloquentRoleRepository::class,
         PermissionRepositoryInterface::class => EloquentPermissionRepository::class,
+
+        // Shared, entity-agnostic capabilities rather than per-context ports:
+        // turning rows into a file needs no domain knowledge, so Role,
+        // Permission and every future CRUD resolve the same two adapters.
+        PdfExporterInterface::class => SpatiePdfExporter::class,
+        ExcelExporterInterface::class => SpatieExcelExporter::class,
     ];
 
     /**
