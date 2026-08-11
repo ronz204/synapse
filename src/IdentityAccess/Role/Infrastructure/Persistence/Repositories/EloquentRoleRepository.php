@@ -28,16 +28,19 @@ final class EloquentRoleRepository implements RoleRepositoryInterface
         return $model ? $this->toDomain($model) : null;
     }
 
-    public function all(?string $sortBy = null, string $sortDir = 'asc'): array
+    public function all(?string $search = null, ?string $sortBy = null, string $sortDir = 'asc'): array
     {
+        $query = RoleModel::query()->with('permissions');
+
+        if (filled($search)) {
+            $query->where('name', 'like', "%{$search}%");
+        }
+
         $column = in_array($sortBy, self::SORTABLE_COLUMNS, true) ? $sortBy : 'name';
         $direction = $sortDir === 'desc' ? 'desc' : 'asc';
 
         /** @var Collection<int, RoleModel> $models */
-        $models = RoleModel::query()
-            ->with('permissions')
-            ->orderBy($column, $direction)
-            ->get();
+        $models = $query->orderBy($column, $direction)->get();
 
         return $models->map($this->toDomain(...))->all();
     }

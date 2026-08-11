@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Src\IdentityAccess\Role\Presentation\Livewire;
 
 use App\Livewire\Concerns\InteractsWithDataTable;
+use App\Livewire\Concerns\InteractsWithExports;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Src\IdentityAccess\Permission\Application\UseCases\ListPermissionsUseCase;
@@ -21,12 +23,16 @@ use Src\IdentityAccess\Role\Application\UseCases\UpdateRoleUseCase;
 use Src\IdentityAccess\Role\Domain\Entities\Role;
 use Src\IdentityAccess\Role\Domain\Exceptions\RoleIsProtectedException;
 use Src\IdentityAccess\Role\Presentation\Livewire\Forms\RoleForm;
+use Src\Shared\Export\Contracts\ExcelExporterInterface;
+use Src\Shared\Export\Contracts\PdfExporterInterface;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 #[Layout('layouts.dashboard', ['title' => 'Roles', 'subtitle' => 'System user roles management'])]
 class RoleComponent extends Component
 {
     use AuthorizesRequests;
     use InteractsWithDataTable;
+    use InteractsWithExports;
 
     /**
      * Roles are a small, reference-style catalog (typically a handful to
@@ -121,16 +127,37 @@ class RoleComponent extends Component
         $this->dispatch('toast', variant: 'success', text: __('Role deleted.'));
     }
 
-    public function exportPdf(): void
+    /**
+     * $search arrives from the view, not from $this->search: in client mode
+     * the search box is bound to Alpine (not wire:model), so the live filter
+     * only exists in the browser. The data-table passes it explicitly so the
+     * file reproduces what the user is actually looking at. In server mode
+     * nothing is passed and $this->search is already authoritative.
+     */
+    public function exportPdf(PdfExporterInterface $exporter, ListRolesUseCase $useCase, ?string $search = null): StreamedResponse
     {
         $this->authorize('exportPdf', Role::class);
-        $this->dispatch('toast', variant: 'info', text: __('Export coming soon.'));
+
+        return $this->streamPdf(
+            __('Roles'),
+            $this->exportHeaders(),
+            $this->exportableRows($useCase, $search),
+            Str::slug(__('Roles')).'.pdf',
+            $exporter,
+            paperSize: 'letter',
+        );
     }
 
-    public function exportExcel(): void
+    public function exportExcel(ExcelExporterInterface $exporter, ListRolesUseCase $useCase, ?string $search = null): StreamedResponse
     {
         $this->authorize('exportExcel', Role::class);
-        $this->dispatch('toast', variant: 'info', text: __('Export coming soon.'));
+
+        return $this->streamExcel(
+            $this->exportHeaders(),
+            $this->exportableRows($useCase, $search),
+            Str::slug(__('Roles')).'.xlsx',
+            $exporter,
+        );
     }
 
     public function render(ListRolesUseCase $useCase, ListPermissionsUseCase $permissionsUseCase): View
@@ -211,6 +238,43 @@ class RoleComponent extends Component
     private function freshRows(ListRolesUseCase $useCase): array
     {
         return array_map($this->toRow(...), $useCase->all(sortBy: $this->sortKey, sortDir: $this->sortDir));
+    }
+
+    /**
+     * Same projection as freshRows(), but filtered by the search term the
+     * user currently has applied so an export mirrors the visible table
+     * instead of always dumping the whole catalog.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function exportableRows(ListRolesUseCase $useCase, ?string $search): array
+    {
+        $candidate = filled($search) ? $search : $this->search;
+
+        return array_map(
+            $this->toRow(...),
+            $useCase->all(
+                search: $candidate !== '' ? $candidate : null,
+                sortBy: $this->sortKey,
+                sortDir: $this->sortDir,
+            ),
+        );
+    }
+
+    /**
+     * Export columns, deliberately mirroring the on-screen <x-ui.data-table>
+     * headers so both stay in step. `format` renders a stored value the way
+     * the table shows it — a raw `true` would land in the file as "1".
+     *
+     * @return array<int, array{key: string, label: string, format?: callable}>
+     */
+    private function exportHeaders(): array
+    {
+        return [
+            ['key' => 'name', 'label' => __('Name')],
+            ['key' => 'permissionsCount', 'label' => __('Permissions')],
+            ['key' => 'protected', 'label' => __('Type'), 'format' => fn (bool $protected): string => $protected ? __('System') : __('Custom')],
+        ];
     }
 
     /**
