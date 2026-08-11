@@ -232,5 +232,11 @@
 
   "Profile updated.": "Perfil actualizado.",
   "Password updated.": "Contraseña actualizada.",
-  "The picture could not be saved. Please try again.": "No se pudo guardar la imagen. Inténtelo de nuevo."
+  "The picture could not be saved. Please try again.": "No se pudo guardar la imagen. Inténtelo de nuevo.",
+
+  "Access denied": "Acceso denegado",
+  "You do not have permission to view this page": "No tiene permiso para ver esta página",
+  "Your account does not have the required permission for this action. If you believe this is a mistake, contact your system administrator.": "Su cuenta no tiene el permiso necesario para esta acción. Si cree que se trata de un error, contacte al administrador del sistema.",
+  "Back to dashboard": "Volver al panel",
+  "Back to home": "Volver al inicio"
 }
