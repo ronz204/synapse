@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use Database\Factories\ArchivoFactory;
+use Database\Factories\DocumentFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -16,14 +16,14 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property string $uuid
  * @property int|null $user_id
- * @property string $archivable_type
- * @property int $archivable_id
- * @property string $tipo_documento
- * @property string $nombre_original
- * @property string $disco
- * @property string $ruta
+ * @property string $documentable_type
+ * @property int $documentable_id
+ * @property string $document_type
+ * @property string $original_name
+ * @property string $disk
+ * @property string $path
  * @property string $mime_type
- * @property int $tamano_bytes
+ * @property int $size_bytes
  * @property string $hash_sha256
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -31,25 +31,25 @@ use Illuminate\Support\Carbon;
 #[Fillable([
     'uuid',
     'user_id',
-    'archivable_type',
-    'archivable_id',
-    'tipo_documento',
-    'nombre_original',
-    'disco',
-    'ruta',
+    'documentable_type',
+    'documentable_id',
+    'document_type',
+    'original_name',
+    'disk',
+    'path',
     'mime_type',
-    'tamano_bytes',
+    'size_bytes',
     'hash_sha256',
 ])]
-class Archivo extends Model
+class Document extends Model
 {
-    /** @use HasFactory<ArchivoFactory> */
+    /** @use HasFactory<DocumentFactory> */
     use HasFactory;
 
     /**
      * @return MorphTo<Model, $this>
      */
-    public function archivable(): MorphTo
+    public function documentable(): MorphTo
     {
         return $this->morphTo();
     }

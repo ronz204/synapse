@@ -62,6 +62,6 @@ class Permission extends Model
     {
         return $this->belongsToMany(User::class)
             ->using(PermissionUser::class)
-            ->withPivot('otorgado_por', 'created_at');
+            ->withPivot('granted_by', 'created_at');
     }
 }

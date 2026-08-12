@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
-enum PlanClasificacion: string
+enum PlanClassification: string
 {
-    case Vigente = 'Vigente';
+    case Active = 'Vigente';
     case Terminal = 'Terminal';
 }

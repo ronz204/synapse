@@ -93,7 +93,7 @@ class User extends Authenticatable implements PasskeyUser
     }
 
     /**
-     * Permisos otorgados directamente al usuario, además de los heredados por rol.
+     * Permissions granted directly to the user, in addition to those inherited through roles.
      *
      * @return BelongsToMany<Permission, $this, PermissionUser>
      */
@@ -101,14 +101,14 @@ class User extends Authenticatable implements PasskeyUser
     {
         return $this->belongsToMany(Permission::class)
             ->using(PermissionUser::class)
-            ->withPivot('otorgado_por', 'created_at');
+            ->withPivot('granted_by', 'created_at');
     }
 
     /**
-     * @return HasOne<Estudiante, $this>
+     * @return HasOne<Student, $this>
      */
-    public function estudiante(): HasOne
+    public function student(): HasOne
     {
-        return $this->hasOne(Estudiante::class);
+        return $this->hasOne(Student::class);
     }
 }

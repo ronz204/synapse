@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use Database\Factories\PeriodoAcademicoFactory;
+use Database\Factories\AcademicPeriodFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -14,18 +14,18 @@ use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
- * @property int $anio
- * @property int $cuatrimestre
- * @property Carbon $fecha_inicio
- * @property Carbon $fecha_fin
+ * @property int $year
+ * @property int $quarter
+ * @property Carbon $start_date
+ * @property Carbon $end_date
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Table(name: 'periodos_academicos')]
-#[Fillable(['anio', 'cuatrimestre', 'fecha_inicio', 'fecha_fin'])]
-class PeriodoAcademico extends Model
+#[Table(name: 'academic_periods')]
+#[Fillable(['year', 'quarter', 'start_date', 'end_date'])]
+class AcademicPeriod extends Model
 {
-    /** @use HasFactory<PeriodoAcademicoFactory> */
+    /** @use HasFactory<AcademicPeriodFactory> */
     use HasFactory;
 
     /**
@@ -34,16 +34,16 @@ class PeriodoAcademico extends Model
     protected function casts(): array
     {
         return [
-            'fecha_inicio' => 'date',
-            'fecha_fin' => 'date',
+            'start_date' => 'date',
+            'end_date' => 'date',
         ];
     }
 
     /**
-     * @return HasMany<HistorialAcademico, $this>
+     * @return HasMany<StudentAcademicRecord, $this>
      */
-    public function historialAcademico(): HasMany
+    public function studentAcademicRecords(): HasMany
     {
-        return $this->hasMany(HistorialAcademico::class);
+        return $this->hasMany(StudentAcademicRecord::class);
     }
 }

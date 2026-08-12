@@ -15,11 +15,11 @@ use Illuminate\Support\Carbon;
 /**
  * @property int $user_id
  * @property int $permission_id
- * @property int|null $otorgado_por
+ * @property int|null $granted_by
  * @property Carbon|null $created_at
  */
 #[Table(name: 'permission_user')]
-#[Fillable(['user_id', 'permission_id', 'otorgado_por'])]
+#[Fillable(['user_id', 'permission_id', 'granted_by'])]
 class PermissionUser extends Pivot
 {
     /** @use HasFactory<PermissionUserFactory> */
@@ -73,6 +73,6 @@ class PermissionUser extends Pivot
      */
     public function grantor(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'otorgado_por');
+        return $this->belongsTo(User::class, 'granted_by');
     }
 }
