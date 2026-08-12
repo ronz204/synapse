@@ -1,6 +1,11 @@
 <?php
 
+use App\Models\Permission;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Src\Shared\Export\Contracts\ExcelExporterInterface;
+use Src\Shared\Export\Contracts\PdfExporterInterface;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Tests\TestCase;
 
 /*
@@ -47,4 +52,93 @@ expect()->extend('toBeOne', function () {
 function something()
 {
     // ..
+}
+
+/**
+ * Creates a user holding exactly the named permissions (granted directly, so a
+ * test states its own preconditions instead of depending on the seeders' role
+ * definitions). Each permission row is created on the fly from its
+ * "module.action" name.
+ *
+ * @param  array<int, string>  $permissions
+ */
+function userWithPermissions(array $permissions): User
+{
+    $user = User::factory()->create();
+
+    foreach ($permissions as $name) {
+        [$module, $action] = explode('.', $name, 2);
+
+        Permission::query()->firstOrCreate(
+            ['name' => $name],
+            ['module' => $module, 'action' => $action],
+        );
+    }
+
+    $user->givePermissionTo(...$permissions);
+
+    return $user->fresh();
+}
+
+/**
+ * Swaps the PDF port for a spy and returns it. The real SpatiePdfExporter
+ * shells out to headless Chromium — slow, and dependent on a Chrome binary
+ * being present. Asserting against the port instead is precisely what the
+ * Hexagonal boundary buys: component behaviour verified without the
+ * infrastructure.
+ */
+function fakePdfExporter(): object
+{
+    $spy = new class implements PdfExporterInterface
+    {
+        public ?string $html = null;
+
+        public ?string $filename = null;
+
+        public ?string $paperSize = null;
+
+        public function fromHtml(string $html, string $filename, string $paperSize = 'a4'): StreamedResponse
+        {
+            $this->html = $html;
+            $this->filename = $filename;
+            $this->paperSize = $paperSize;
+
+            return new StreamedResponse(fn () => print ('pdf'));
+        }
+    };
+
+    app()->instance(PdfExporterInterface::class, $spy);
+
+    return $spy;
+}
+
+/**
+ * Swaps the Excel port for a spy that records the fully-mapped rows, letting a
+ * test assert on column labels and formatted values without parsing a real
+ * spreadsheet.
+ */
+function fakeExcelExporter(): object
+{
+    $spy = new class implements ExcelExporterInterface
+    {
+        /** @var array<int, array<string, mixed>> */
+        public array $rows = [];
+
+        public ?string $filename = null;
+
+        public function streamDownload(iterable $rows, string $filename): StreamedResponse
+        {
+            foreach ($rows as $row) {
+                $this->rows[] = $row;
+            }
+
+            $this->filename = $filename;
+
+            return new StreamedResponse(fn () => print ('xlsx'));
+        }
+    };
+
+    app()->instance(ExcelExporterInterface::class, $spy);
+
+    return $spy;
 }

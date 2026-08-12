@@ -8,7 +8,8 @@
 'sortDir' => 'asc',
 'perPage' => 10,
 'canCreate' => false,
-'canExport' => false,
+'canExportPdf' => false,
+'canExportExcel' => false,
 'title' => '',
 'tableCols' => '1fr',
 'createAction' => "\$wire.openCreateModal()",
@@ -29,6 +30,11 @@
 
 @php
     $isClient = $mode === 'client';
+
+    // The dropdown itself only needs to exist if at least one of the two
+    // formats is permitted; each item is then gated individually, so a user
+    // allowed only one format never sees a button that would 403 on click.
+    $canExport = $canExportPdf || $canExportExcel;
 
     if (! $isClient) {
         $total = $paginator?->total() ?? 0;
@@ -86,28 +92,43 @@
                         <span>{{ __('Download') }}</span>
                     </button>
 
+                    {{--
+                        Client mode passes Alpine's live `search` value into the
+                        Livewire call so the file matches the filtered table the
+                        user is looking at. The search box is bound to Alpine
+                        (x-model), not wire:model, so $this->search is empty
+                        server-side in this mode — without this the export would
+                        silently dump the whole catalog. Server mode passes
+                        nothing, because there $this->search is authoritative.
+                    --}}
                     <div class="download-menu" :class="{ 'open': open }">
-                        <button type="button" class="download-item" wire:click="exportPdf" x-on:click="open = false">
-                            <svg class="download-icon-pdf" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                                <polyline points="14 2 14 8 20 8" />
-                                <line x1="9" y1="13" x2="9" y2="17" />
-                                <line x1="12" y1="13" x2="12" y2="17" />
-                                <line x1="15" y1="13" x2="15" y2="17" />
-                            </svg>
-                            <span>{{ __('Export to PDF') }}</span>
-                        </button>
+                        @if ($canExportPdf)
+                            <button type="button" class="download-item" wire:click="{{ $isClient ? 'exportPdf(search)' : 'exportPdf' }}" x-on:click="open = false">
+                                <svg class="download-icon-pdf" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                    <polyline points="14 2 14 8 20 8" />
+                                    <line x1="9" y1="13" x2="9" y2="17" />
+                                    <line x1="12" y1="13" x2="12" y2="17" />
+                                    <line x1="15" y1="13" x2="15" y2="17" />
+                                </svg>
+                                <span>{{ __('Export to PDF') }}</span>
+                            </button>
+                        @endif
 
-                        <div class="download-divider"></div>
+                        @if ($canExportPdf && $canExportExcel)
+                            <div class="download-divider"></div>
+                        @endif
 
-                        <button type="button" class="download-item" wire:click="exportExcel" x-on:click="open = false">
-                            <svg class="download-icon-excel" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                                <polyline points="14 2 14 8 20 8" />
-                                <path d="M9 13l2.5 5L14 13" />
-                            </svg>
-                            <span>{{ __('Export to Excel') }}</span>
-                        </button>
+                        @if ($canExportExcel)
+                            <button type="button" class="download-item" wire:click="{{ $isClient ? 'exportExcel(search)' : 'exportExcel' }}" x-on:click="open = false">
+                                <svg class="download-icon-excel" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                    <polyline points="14 2 14 8 20 8" />
+                                    <path d="M9 13l2.5 5L14 13" />
+                                </svg>
+                                <span>{{ __('Export to Excel') }}</span>
+                            </button>
+                        @endif
                     </div>
                 </div>
             @endif

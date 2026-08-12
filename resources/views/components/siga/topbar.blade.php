@@ -47,10 +47,13 @@
 
         <div class="profile-wrap" x-data="{ profileOpen: false }" @click.outside="profileOpen = false">
             <div class="profile-btn" @click="profileOpen = !profileOpen">
-                {{-- Initials only. SIGA-UTN renders an uploaded picture here through
-                     User::avatarUrl(), which depends on an avatar_path column this
-                     branch does not carry. Add the <img> back with that migration. --}}
-                <div class="avatar">{{ auth()->user()->initials() }}</div>
+                <div class="avatar">
+                    @if (auth()->user()->avatarUrl())
+                        <img src="{{ auth()->user()->avatarUrl() }}" alt="{{ auth()->user()->name }}">
+                    @else
+                        {{ auth()->user()->initials() }}
+                    @endif
+                </div>
                 <svg class="profile-chevron" :class="{ 'open': profileOpen }" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="6 9 12 15 18 9"></polyline>
                 </svg>

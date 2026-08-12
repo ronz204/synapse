@@ -28,6 +28,31 @@ class PermissionUser extends Pivot
     const UPDATED_AT = null;
 
     /**
+     * The permission_user table has a created_at column but deliberately no
+     * updated_at: a grant is never edited in place, it is granted or revoked.
+     *
+     * Overriding the getter is what actually enforces that, because neither of
+     * the two obvious declarations survives a pivot reached through a relation:
+     *
+     * - `const UPDATED_AT = null` is bypassed, since AsPivot::getUpdatedAtColumn()
+     *   delegates to the pivotParent (User) whenever one is set, and so resolves
+     *   to User's own 'updated_at'.
+     * - `public $timestamps = false` is overwritten, since AsPivot::fromAttributes()
+     *   reassigns it from hasTimestampAttributes() — and the attach record does
+     *   carry created_at, because withPivot() below declares that column.
+     *
+     * Without this, User::givePermissionTo() fails outright with
+     * "Unknown column 'updated_at' in 'field list'".
+     *
+     * created_at is unaffected: BelongsToMany populates it in
+     * formatAttachRecords(), and getCreatedAtColumn() resolves correctly.
+     */
+    public function getUpdatedAtColumn(): ?string
+    {
+        return null;
+    }
+
+    /**
      * @return BelongsTo<User, $this>
      */
     public function user(): BelongsTo

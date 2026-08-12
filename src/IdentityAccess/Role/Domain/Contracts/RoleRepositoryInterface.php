@@ -20,9 +20,14 @@ interface RoleRepositoryInterface
      * that resolve search/sort/pagination in the browser. Reserved for
      * datasets small enough to ship to the client in one response.
      *
+     * $search stays optional and unused by the client-side table (Alpine
+     * already filters in the browser); it exists for exports, which must
+     * reproduce exactly what the user currently sees on screen rather
+     * than dumping the whole catalog.
+     *
      * @return array<int, Role>
      */
-    public function all(?string $sortBy = null, string $sortDir = 'asc'): array;
+    public function all(?string $search = null, ?string $sortBy = null, string $sortDir = 'asc'): array;
 
     /**
      * @return array{items: array<int, Role>, total: int}
