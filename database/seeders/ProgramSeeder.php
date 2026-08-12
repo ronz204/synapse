@@ -2,20 +2,20 @@
 
 namespace Database\Seeders;
 
-use App\Models\Carrera;
+use App\Models\Program;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
-class CarreraSeeder extends Seeder
+class ProgramSeeder extends Seeder
 {
     use WithoutModelEvents;
 
     /**
-     * Las 14 carreras del Manual de Atinencias en alcance (siga.sql §9.1).
+     * The 14 programs from the Manual de Atinencias in scope (siga.sql §9.1).
      */
     public function run(): void
     {
-        $carreras = [
+        $programs = [
             'Administración y Gestión de Recursos Humanos',
             'Administración Aduanera',
             'Ingeniería en Tecnologías de Información - Tecnologías de Información',
@@ -32,8 +32,8 @@ class CarreraSeeder extends Seeder
             'Administración del Comercio Exterior',
         ];
 
-        foreach ($carreras as $nombre) {
-            Carrera::query()->firstOrCreate(['nombre' => $nombre]);
+        foreach ($programs as $name) {
+            Program::query()->firstOrCreate(['name' => $name]);
         }
     }
 }

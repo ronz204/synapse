@@ -2,14 +2,14 @@
 
 namespace Database\Factories;
 
-use App\Models\Nivel;
-use App\Models\PlanEstudio;
+use App\Models\Level;
+use App\Models\StudyPlan;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<Nivel>
+ * @extends Factory<Level>
  */
-class NivelFactory extends Factory
+class LevelFactory extends Factory
 {
     /**
      * @return array<string, mixed>
@@ -17,8 +17,8 @@ class NivelFactory extends Factory
     public function definition(): array
     {
         return [
-            'plan_estudio_id' => PlanEstudio::factory(),
-            'numero' => fake()->unique()->numberBetween(1, 10),
+            'study_plan_id' => StudyPlan::factory(),
+            'number' => fake()->unique()->numberBetween(1, 10),
         ];
     }
 }

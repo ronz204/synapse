@@ -15,7 +15,7 @@ use Illuminate\Database\Eloquent\Model;
  *
  * The roles() and permissions() relations deliberately live on the User model
  * rather than here: this project's pivots carry extra columns (created_at, and
- * otorgado_por on permission_user through the PermissionUser pivot model) that
+ * granted_by on permission_user through the PermissionUser pivot model) that
  * a generic trait has no business redefining.
  *
  * @mixin Model

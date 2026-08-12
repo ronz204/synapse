@@ -2,13 +2,13 @@
 
 namespace Database\Factories;
 
-use App\Models\Modalidad;
+use App\Models\Modality;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<Modalidad>
+ * @extends Factory<Modality>
  */
-class ModalidadFactory extends Factory
+class ModalityFactory extends Factory
 {
     /**
      * @return array<string, mixed>
@@ -16,15 +16,15 @@ class ModalidadFactory extends Factory
     public function definition(): array
     {
         return [
-            'nombre' => fake()->unique()->word(),
-            'requiere_resolucion' => false,
+            'name' => fake()->unique()->word(),
+            'requires_resolution' => false,
         ];
     }
 
-    public function requiereResolucion(): static
+    public function requiresResolution(): static
     {
         return $this->state(fn (array $attributes) => [
-            'requiere_resolucion' => true,
+            'requires_resolution' => true,
         ]);
     }
 }

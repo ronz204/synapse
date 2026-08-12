@@ -2,13 +2,13 @@
 
 namespace Database\Factories;
 
-use App\Models\Carrera;
+use App\Models\Program;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<Carrera>
+ * @extends Factory<Program>
  */
-class CarreraFactory extends Factory
+class ProgramFactory extends Factory
 {
     /**
      * @return array<string, mixed>
@@ -16,15 +16,15 @@ class CarreraFactory extends Factory
     public function definition(): array
     {
         return [
-            'nombre' => fake()->unique()->company().' - '.fake()->jobTitle(),
-            'activa' => true,
+            'name' => fake()->unique()->company().' - '.fake()->jobTitle(),
+            'active' => true,
         ];
     }
 
-    public function inactiva(): static
+    public function inactive(): static
     {
         return $this->state(fn (array $attributes) => [
-            'activa' => false,
+            'active' => false,
         ]);
     }
 }
