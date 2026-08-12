@@ -22,7 +22,7 @@ class PermissionUserFactory extends Factory
         return [
             'user_id' => User::factory(),
             'permission_id' => Permission::factory(),
-            'otorgado_por' => User::factory(),
+            'granted_by' => User::factory(),
         ];
     }
 }

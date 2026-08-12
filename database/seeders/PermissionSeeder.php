@@ -12,7 +12,7 @@ class PermissionSeeder extends Seeder
     use WithoutModelEvents;
 
     /**
-     * Permisos base del RBAC (siga.sql §9.4).
+     * Base RBAC permissions (siga.sql §9.4).
      */
     public function run(): void
     {
@@ -35,9 +35,9 @@ class PermissionSeeder extends Seeder
             'solicitudes.revisar' => 'Revisar y resolver solicitudes estudiantiles',
         ];
 
-        // Permisos por operación del módulo IdentityAccess. Las políticas de Role
-        // y Permission los comprueban por nombre, y las vistas hacen lo mismo en
-        // modo cliente, donde no hay entidad contra la que autorizar.
+        // Per-operation permissions for the IdentityAccess module. Role and
+        // Permission's policies check them by name, and the views do the same
+        // in client mode, where there's no entity to authorize against.
         foreach (['roles', 'permissions'] as $module) {
             $subject = $module === 'roles' ? 'roles' : 'permisos';
 

@@ -12,12 +12,12 @@ class PermissionRoleSeeder extends Seeder
     use WithoutModelEvents;
 
     /**
-     * Matriz rol -> permisos (siga.sql §9.4). Mapeado por nombre, no por id
-     * numérico, para no depender del orden de inserción de RoleSeeder/PermissionSeeder.
+     * Role -> permissions matrix (siga.sql §9.4). Mapped by name, not numeric
+     * id, so it doesn't depend on RoleSeeder/PermissionSeeder's insertion order.
      */
     public function run(): void
     {
-        $matriz = [
+        $matrix = [
             'Administrador' => [
                 'atestados.gestionar', 'catalogo.gestionar', 'oferta.gestionar', 'atinencia.verificar',
                 'nota_tecnica.aprobar', 'oferta.consultar', 'usuarios.gestionar', 'archivos.subir',
@@ -41,7 +41,7 @@ class PermissionRoleSeeder extends Seeder
             'Comisión Técnica' => ['solicitudes.revisar', 'archivos.descargar'],
         ];
 
-        foreach ($matriz as $roleName => $permissionNames) {
+        foreach ($matrix as $roleName => $permissionNames) {
             $role = Role::query()->where('name', $roleName)->firstOrFail();
 
             $permissionIds = Permission::query()

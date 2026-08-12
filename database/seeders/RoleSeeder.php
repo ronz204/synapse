@@ -12,7 +12,7 @@ class RoleSeeder extends Seeder
     use WithoutModelEvents;
 
     /**
-     * Roles base del RBAC (siga.sql §9.4).
+     * Base RBAC roles (siga.sql §9.4).
      */
     public function run(): void
     {
