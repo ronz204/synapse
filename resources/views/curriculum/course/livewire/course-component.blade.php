@@ -26,7 +26,7 @@
         :sort-key="$sortKey"
         :sort-dir="$sortDir"
         :per-page="$perPage"
-        table-cols="1fr 2fr 1fr 1fr"
+        table-cols="1fr 2fr 1fr 1fr 0.8fr"
         :can-create="Auth::user()->can('create', \Src\Curriculum\Course\Domain\Entities\Course::class)"
         :can-export-pdf="Auth::user()->can('exportPdf', \Src\Curriculum\Course\Domain\Entities\Course::class)"
         :can-export-excel="Auth::user()->can('exportExcel', \Src\Curriculum\Course\Domain\Entities\Course::class)"

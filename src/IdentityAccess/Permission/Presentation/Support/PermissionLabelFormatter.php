@@ -20,6 +20,7 @@ final class PermissionLabelFormatter
         'edit' => 'Editar',
         'delete' => 'Eliminar',
         'search' => 'Buscar',
+        'resolve_contradiction' => 'Resolver contradicciones de',
         'export_pdf' => 'Exportar PDF de',
         'export_excel' => 'Exportar Excel de',
     ];
@@ -30,6 +31,7 @@ final class PermissionLabelFormatter
         'permissions' => 'permisos',
         'courses' => 'cursos',
         'study_plans' => 'planes de estudio',
+        'equivalencies' => 'equiparaciones',
     ];
 
     public static function forHumans(string $module, string $action): string

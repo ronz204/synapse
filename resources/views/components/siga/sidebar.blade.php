@@ -64,7 +64,7 @@
         {{-- Courses and Study Plans (RC-01) live in the Curriculum module, guarded the
              same way as the SYSTEM ADMINISTRATION group above: kept out of the markup
              until those routes are actually registered. --}}
-        @if (Route::has('curriculum.course.index') || Route::has('curriculum.study_plan.index'))
+        @if (Route::has('curriculum.course.index') || Route::has('curriculum.study_plan.index') || Route::has('curriculum.equivalency.index'))
         <div class="nav-group">
             <span class="nav-label" data-labels>{{ __('STUDY PLANS') }}</span>
 
@@ -88,6 +88,22 @@
                     <line x1="12" y1="6.5" x2="12" y2="19.5"></line>
                 </svg>
                 <span class="nav-text" data-labels>{{ __('Study Plans') }}</span>
+                <svg class="nav-chevron" data-labels width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6;">
+                    <polyline points="9 6 15 12 9 18"></polyline>
+                </svg>
+            </a>
+            @endif
+
+            @if (Route::has('curriculum.equivalency.index'))
+            <a href="{{ route('curriculum.equivalency.index') }}" wire:navigate wire:current="active" class="nav-item">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17 3a2 2 0 0 1 2 2v3.5"></path>
+                    <path d="M19 12v6a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h6"></path>
+                    <path d="M12 3v6h6"></path>
+                    <path d="M8 13h5"></path>
+                    <path d="M8 17h8"></path>
+                </svg>
+                <span class="nav-text" data-labels>{{ __('Equivalencies') }}</span>
                 <svg class="nav-chevron" data-labels width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6;">
                     <polyline points="9 6 15 12 9 18"></polyline>
                 </svg>

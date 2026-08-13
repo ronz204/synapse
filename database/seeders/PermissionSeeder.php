@@ -43,16 +43,22 @@ class PermissionSeeder extends Seeder
         // this slice offers no destructive/deactivation action for it — only
         // create/edit (including a classification transition). courses does
         // have `.delete`, wired to a deactivation use case, not a row delete.
+        // equivalencies has neither `.edit` nor `.delete` (an Equivalency is
+        // append-only), but has its own `.resolve_contradiction`, distinct
+        // from `.create` — registering and resolving a contradiction are
+        // separate authorizations per the RC-02 spec.
         $moduleSubjects = [
             'roles' => 'roles',
             'permissions' => 'permisos',
             'courses' => 'cursos',
             'study_plans' => 'planes de estudio',
+            'equivalencies' => 'equiparaciones',
         ];
 
         $standardActions = ['view', 'search', 'create', 'edit', 'delete', 'export_pdf', 'export_excel'];
         $moduleActions = [
             'study_plans' => ['view', 'search', 'create', 'edit', 'export_pdf', 'export_excel'],
+            'equivalencies' => ['view', 'search', 'create', 'resolve_contradiction', 'export_pdf', 'export_excel'],
         ];
 
         $actionDescriptions = [
@@ -61,6 +67,7 @@ class PermissionSeeder extends Seeder
             'create' => 'Crear %s',
             'edit' => 'Editar %s',
             'delete' => 'Eliminar %s',
+            'resolve_contradiction' => 'Resolver contradicciones de %s',
             'export_pdf' => 'Exportar %s a PDF',
             'export_excel' => 'Exportar %s a Excel',
         ];
