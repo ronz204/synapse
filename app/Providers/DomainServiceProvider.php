@@ -8,6 +8,14 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
+use Src\Curriculum\Course\Domain\Contracts\CourseRepositoryInterface;
+use Src\Curriculum\Course\Domain\Entities\Course;
+use Src\Curriculum\Course\Infrastructure\Persistence\Repositories\EloquentCourseRepository;
+use Src\Curriculum\Course\Presentation\Policies\CoursePolicy;
+use Src\Curriculum\StudyPlan\Domain\Contracts\StudyPlanRepositoryInterface;
+use Src\Curriculum\StudyPlan\Domain\Entities\StudyPlan;
+use Src\Curriculum\StudyPlan\Infrastructure\Persistence\Repositories\EloquentStudyPlanRepository;
+use Src\Curriculum\StudyPlan\Presentation\Policies\StudyPlanPolicy;
 use Src\IdentityAccess\Permission\Domain\Contracts\PermissionRepositoryInterface;
 use Src\IdentityAccess\Permission\Domain\Entities\Permission;
 use Src\IdentityAccess\Permission\Infrastructure\Persistence\Repositories\EloquentPermissionRepository;
@@ -36,6 +44,8 @@ final class DomainServiceProvider extends ServiceProvider
     private array $domainBindings = [
         RoleRepositoryInterface::class => EloquentRoleRepository::class,
         PermissionRepositoryInterface::class => EloquentPermissionRepository::class,
+        CourseRepositoryInterface::class => EloquentCourseRepository::class,
+        StudyPlanRepositoryInterface::class => EloquentStudyPlanRepository::class,
 
         // Shared, entity-agnostic capabilities rather than per-context ports:
         // turning rows into a file needs no domain knowledge, so Role,
@@ -50,6 +60,8 @@ final class DomainServiceProvider extends ServiceProvider
     private array $domainPolicies = [
         Role::class => RolePolicy::class,
         Permission::class => PermissionPolicy::class,
+        Course::class => CoursePolicy::class,
+        StudyPlan::class => StudyPlanPolicy::class,
     ];
 
     public function register(): void

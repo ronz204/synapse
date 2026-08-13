@@ -61,6 +61,41 @@
         </div>
         @endif
 
+        {{-- Courses and Study Plans (RC-01) live in the Curriculum module, guarded the
+             same way as the SYSTEM ADMINISTRATION group above: kept out of the markup
+             until those routes are actually registered. --}}
+        @if (Route::has('curriculum.course.index') || Route::has('curriculum.study_plan.index'))
+        <div class="nav-group">
+            <span class="nav-label" data-labels>{{ __('STUDY PLANS') }}</span>
+
+            @if (Route::has('curriculum.course.index'))
+            <a href="{{ route('curriculum.course.index') }}" wire:navigate wire:current="active" class="nav-item">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                </svg>
+                <span class="nav-text" data-labels>{{ __('Courses') }}</span>
+                <svg class="nav-chevron" data-labels width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6;">
+                    <polyline points="9 6 15 12 9 18"></polyline>
+                </svg>
+            </a>
+            @endif
+
+            @if (Route::has('curriculum.study_plan.index'))
+            <a href="{{ route('curriculum.study_plan.index') }}" wire:navigate wire:current="active" class="nav-item">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 6.5c-1.6-1.3-3.8-2-6-2-.6 0-1 .4-1 1v11c0 .6.4 1 1 1 2.2 0 4.4.7 6 2 1.6-1.3 3.8-2 6-2 .6 0 1-.4 1-1v-11c0-.6-.4-1-1-1-2.2 0-4.4.7-6 2z"></path>
+                    <line x1="12" y1="6.5" x2="12" y2="19.5"></line>
+                </svg>
+                <span class="nav-text" data-labels>{{ __('Study Plans') }}</span>
+                <svg class="nav-chevron" data-labels width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6;">
+                    <polyline points="9 6 15 12 9 18"></polyline>
+                </svg>
+            </a>
+            @endif
+        </div>
+        @endif
+
         {{-- Everything below is design-only. These entries call setSection(), which just
              swaps a heading in Alpine — none of them route anywhere yet. They stay so the
              shell matches the approved design; wire them up as each module lands. --}}

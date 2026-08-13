@@ -35,21 +35,40 @@ class PermissionSeeder extends Seeder
             'solicitudes.revisar' => 'Revisar y resolver solicitudes estudiantiles',
         ];
 
-        // Per-operation permissions for the IdentityAccess module. Role and
-        // Permission's policies check them by name, and the views do the same
-        // in client mode, where there's no entity to authorize against.
-        foreach (['roles', 'permissions'] as $module) {
-            $subject = $module === 'roles' ? 'roles' : 'permisos';
+        // Per-operation permissions for granular CRUD modules. Each module's
+        // policy checks these by name, and the views do the same in client
+        // mode, where there's no entity to authorize against yet.
+        //
+        // study_plans has no `.delete`: a StudyPlan has no `active` column and
+        // this slice offers no destructive/deactivation action for it — only
+        // create/edit (including a classification transition). courses does
+        // have `.delete`, wired to a deactivation use case, not a row delete.
+        $moduleSubjects = [
+            'roles' => 'roles',
+            'permissions' => 'permisos',
+            'courses' => 'cursos',
+            'study_plans' => 'planes de estudio',
+        ];
 
-            $permissions += [
-                "{$module}.view" => "Consultar {$subject}",
-                "{$module}.search" => "Buscar {$subject}",
-                "{$module}.create" => "Crear {$subject}",
-                "{$module}.edit" => "Editar {$subject}",
-                "{$module}.delete" => "Eliminar {$subject}",
-                "{$module}.export_pdf" => "Exportar {$subject} a PDF",
-                "{$module}.export_excel" => "Exportar {$subject} a Excel",
-            ];
+        $standardActions = ['view', 'search', 'create', 'edit', 'delete', 'export_pdf', 'export_excel'];
+        $moduleActions = [
+            'study_plans' => ['view', 'search', 'create', 'edit', 'export_pdf', 'export_excel'],
+        ];
+
+        $actionDescriptions = [
+            'view' => 'Consultar %s',
+            'search' => 'Buscar %s',
+            'create' => 'Crear %s',
+            'edit' => 'Editar %s',
+            'delete' => 'Eliminar %s',
+            'export_pdf' => 'Exportar %s a PDF',
+            'export_excel' => 'Exportar %s a Excel',
+        ];
+
+        foreach ($moduleSubjects as $module => $subject) {
+            foreach ($moduleActions[$module] ?? $standardActions as $action) {
+                $permissions["{$module}.{$action}"] = sprintf($actionDescriptions[$action], $subject);
+            }
         }
 
         // This seeder runs WithoutModelEvents, so Permission's saving hook never

@@ -28,6 +28,7 @@ use Illuminate\Support\Carbon;
  * @property bool $active
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ * @property-read CourseLevel $pivot
  */
 #[Fillable([
     'program_id',
@@ -50,6 +51,10 @@ class Course extends Model
     protected function casts(): array
     {
         return [
+            'is_service' => 'boolean',
+            'is_bottleneck' => 'boolean',
+            'requires_laboratory' => 'boolean',
+            'active' => 'boolean',
             'laboratory_type' => LaboratoryType::class,
         ];
     }

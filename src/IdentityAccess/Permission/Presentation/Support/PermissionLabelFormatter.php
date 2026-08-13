@@ -28,6 +28,8 @@ final class PermissionLabelFormatter
     private const MODULE_LABELS = [
         'roles' => 'roles',
         'permissions' => 'permisos',
+        'courses' => 'cursos',
+        'study_plans' => 'planes de estudio',
     ];
 
     public static function forHumans(string $module, string $action): string
