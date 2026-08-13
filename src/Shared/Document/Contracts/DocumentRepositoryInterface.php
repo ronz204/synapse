@@ -18,4 +18,9 @@ interface DocumentRepositoryInterface
      * @param  class-string  $documentableType  the owning Eloquent model's class, e.g. App\Models\Equivalency::class
      */
     public function attach(AttachableDocument $document, string $documentableType, int $documentableId): void;
+
+    /**
+     * @param  class-string  $documentableType  the owning Eloquent model's class, e.g. App\Models\Equivalency::class
+     */
+    public function findFor(string $documentableType, int $documentableId): ?StoredDocument;
 }

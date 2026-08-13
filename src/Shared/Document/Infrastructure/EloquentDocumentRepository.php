@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Src\Shared\Document\Contracts\AttachableDocument;
 use Src\Shared\Document\Contracts\DocumentRepositoryInterface;
+use Src\Shared\Document\Contracts\StoredDocument;
 
 final class EloquentDocumentRepository implements DocumentRepositoryInterface
 {
@@ -46,5 +47,16 @@ final class EloquentDocumentRepository implements DocumentRepositoryInterface
             'size_bytes' => $document->sizeBytes,
             'hash_sha256' => $document->hashSha256,
         ]);
+    }
+
+    public function findFor(string $documentableType, int $documentableId): ?StoredDocument
+    {
+        $document = DocumentModel::query()
+            ->where('documentable_type', $documentableType)
+            ->where('documentable_id', $documentableId)
+            ->latest()
+            ->first();
+
+        return $document ? new StoredDocument($document->disk, $document->path, $document->original_name, $document->mime_type) : null;
     }
 }

@@ -249,3 +249,57 @@ it('blocks resolving a contradiction for a user without equivalencies.resolve_co
         ->call('resolveContradiction', 'candidate')
         ->assertForbidden();
 });
+
+it('streams the attached resolution document back for a user who can view the equivalency', function (): void {
+    $user = userWithPermissions(['equivalencies.view', 'equivalencies.create']);
+    $source = Course::factory()->create();
+    $target = Course::factory()->create();
+
+    Livewire::actingAs($user)
+        ->test(EquivalencyComponent::class)
+        ->set('form.sourceCourseId', $source->id)
+        ->set('form.targetCourseId', $target->id)
+        ->set('form.direction', EquivalencyDirection::OldToNew->value)
+        ->set('form.resolutionNumber', 'R-1')
+        ->set('form.document', pdfUpload('resolution.pdf'))
+        ->call('register');
+
+    $equivalency = Equivalency::query()->where('resolution_number', 'R-1')->firstOrFail();
+
+    Livewire::actingAs($user)
+        ->test(EquivalencyComponent::class)
+        ->call('downloadDocument', $equivalency->id)
+        ->assertOk();
+});
+
+// A separate "blocks downloading without permission" test isn't
+// constructible: EquivalencyPolicy::view() and viewAny() both check the same
+// equivalencies.view permission, so a user lacking it is already forbidden
+// at mount() — the "blocks mounting..." test above already covers that gate.
+
+it('surfaces the superseding resolution number on a Superseded row', function (): void {
+    $user = userWithPermissions(['equivalencies.view', 'equivalencies.create', 'equivalencies.resolve_contradiction']);
+    $source = Course::factory()->create();
+    $target = Course::factory()->create();
+
+    $existing = Equivalency::factory()->oldToNew()->create([
+        'source_course_id' => $source->id,
+        'target_course_id' => $target->id,
+        'resolution_number' => 'R-EXISTING',
+    ]);
+
+    Livewire::actingAs($user)
+        ->test(EquivalencyComponent::class)
+        ->set('form.sourceCourseId', $source->id)
+        ->set('form.targetCourseId', $target->id)
+        ->set('form.direction', EquivalencyDirection::OldToNew->value)
+        ->set('form.resolutionNumber', 'R-CANDIDATE')
+        ->set('form.document', pdfUpload())
+        ->call('register')
+        ->call('resolveContradiction', 'candidate');
+
+    Livewire::actingAs($user)
+        ->test(EquivalencyComponent::class)
+        ->assertSee($existing->fresh()->resolution_number)
+        ->assertSee('R-CANDIDATE');
+});
