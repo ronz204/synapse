@@ -33,7 +33,7 @@ final readonly class StudyPlanDTO
             name: $data['name'],
             implementationYear: $data['implementation_year'],
             classification: PlanClassification::from($data['classification']),
-            enrollmentClosingDate: isset($data['enrollment_closing_date']) && $data['enrollment_closing_date'] !== null
+            enrollmentClosingDate: isset($data['enrollment_closing_date'])
                 ? new DateTimeImmutable($data['enrollment_closing_date'])
                 : null,
         );

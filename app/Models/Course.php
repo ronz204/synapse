@@ -28,6 +28,7 @@ use Illuminate\Support\Carbon;
  * @property bool $active
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ * @property-read CourseLevel $pivot
  */
 #[Fillable([
     'program_id',

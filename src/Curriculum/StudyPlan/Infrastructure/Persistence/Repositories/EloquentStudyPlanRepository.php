@@ -9,6 +9,7 @@ use App\Models\Prerequisite as PrerequisiteModel;
 use App\Models\StudentPlan as StudentPlanModel;
 use App\Models\StudyPlan as StudyPlanModel;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Src\Curriculum\StudyPlan\Domain\Contracts\StudyPlanRepositoryInterface;
 use Src\Curriculum\StudyPlan\Domain\Entities\CourseLink;
@@ -79,7 +80,9 @@ final class EloquentStudyPlanRepository implements StudyPlanRepositoryInterface
             $model->name = $studyPlan->name();
             $model->implementation_year = $studyPlan->implementationYear();
             $model->classification = $studyPlan->classification();
-            $model->enrollment_closing_date = $studyPlan->enrollmentClosingDate();
+            $model->enrollment_closing_date = $studyPlan->enrollmentClosingDate()
+                ? Carbon::instance($studyPlan->enrollmentClosingDate())
+                : null;
             $model->save();
 
             $this->syncLevels($model, $studyPlan->levels());
@@ -103,7 +106,7 @@ final class EloquentStudyPlanRepository implements StudyPlanRepositoryInterface
         $counts = [];
 
         foreach ($rows as $row) {
-            $counts[(int) $row->level] = (int) $row->total;
+            $counts[(int) $row['level']] = (int) $row['total'];
         }
 
         return $counts;

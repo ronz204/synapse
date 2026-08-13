@@ -37,7 +37,7 @@ final readonly class CourseDTO
             isService: $data['is_service'] ?? false,
             isBottleneck: $data['is_bottleneck'] ?? false,
             requiresLaboratory: $data['requires_laboratory'] ?? false,
-            laboratoryType: isset($data['laboratory_type']) && $data['laboratory_type'] !== null
+            laboratoryType: isset($data['laboratory_type'])
                 ? LaboratoryType::from($data['laboratory_type'])
                 : null,
         );

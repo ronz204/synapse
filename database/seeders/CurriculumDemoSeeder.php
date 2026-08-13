@@ -35,7 +35,7 @@ class CurriculumDemoSeeder extends Seeder
         $programs = Program::query()->active()->orderBy('id')->take(2)->get();
 
         if ($programs->count() < 2) {
-            $this->command?->warn('CurriculumDemoSeeder needs at least 2 active programs — run ProgramSeeder first.');
+            $this->command->warn('CurriculumDemoSeeder needs at least 2 active programs — run ProgramSeeder first.');
 
             return;
         }
@@ -62,7 +62,7 @@ class CurriculumDemoSeeder extends Seeder
 
         $this->seedStudents($activePlan);
 
-        $this->command?->info('Curriculum demo data seeded: 2 study plans, '.count($courses).' courses, students enrolled across levels.');
+        $this->command->info('Curriculum demo data seeded: 2 study plans, '.count($courses).' courses, students enrolled across levels.');
     }
 
     /**
@@ -83,9 +83,9 @@ class CurriculumDemoSeeder extends Seeder
             ['code' => 'DEMO-110', 'name' => 'Algorithms Analysis', 'program' => $primaryProgram],
             ['code' => 'DEMO-111', 'name' => 'Applied Statistics', 'program' => $secondaryProgram],
             ['code' => 'DEMO-112', 'name' => 'Cost Accounting', 'program' => $secondaryProgram],
-            ['code' => 'DEMO-201', 'name' => 'English I', 'service' => true],
-            ['code' => 'DEMO-202', 'name' => 'English II', 'service' => true],
-            ['code' => 'DEMO-203', 'name' => 'Ethics and Citizenship', 'service' => true],
+            ['code' => 'DEMO-201', 'name' => 'English I', 'program' => null, 'service' => true],
+            ['code' => 'DEMO-202', 'name' => 'English II', 'program' => null, 'service' => true],
+            ['code' => 'DEMO-203', 'name' => 'Ethics and Citizenship', 'program' => null, 'service' => true],
         ];
 
         return array_map(function (array $definition): Course {
@@ -94,7 +94,7 @@ class CurriculumDemoSeeder extends Seeder
             return Course::query()->firstOrCreate(
                 ['code' => $definition['code']],
                 [
-                    'program_id' => $isService ? null : $definition['program']->id,
+                    'program_id' => $definition['program']?->id,
                     'name' => $definition['name'],
                     'is_service' => $isService,
                     'is_bottleneck' => $definition['bottleneck'] ?? false,
