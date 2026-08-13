@@ -50,6 +50,10 @@ class Course extends Model
     protected function casts(): array
     {
         return [
+            'is_service' => 'boolean',
+            'is_bottleneck' => 'boolean',
+            'requires_laboratory' => 'boolean',
+            'active' => 'boolean',
             'laboratory_type' => LaboratoryType::class,
         ];
     }
