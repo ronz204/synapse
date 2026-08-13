@@ -12,6 +12,10 @@ use Src\Curriculum\Course\Domain\Contracts\CourseRepositoryInterface;
 use Src\Curriculum\Course\Domain\Entities\Course;
 use Src\Curriculum\Course\Infrastructure\Persistence\Repositories\EloquentCourseRepository;
 use Src\Curriculum\Course\Presentation\Policies\CoursePolicy;
+use Src\Curriculum\Equivalency\Domain\Contracts\EquivalencyRepositoryInterface;
+use Src\Curriculum\Equivalency\Domain\Entities\Equivalency;
+use Src\Curriculum\Equivalency\Infrastructure\Persistence\Repositories\EloquentEquivalencyRepository;
+use Src\Curriculum\Equivalency\Presentation\Policies\EquivalencyPolicy;
 use Src\Curriculum\StudyPlan\Domain\Contracts\StudyPlanRepositoryInterface;
 use Src\Curriculum\StudyPlan\Domain\Entities\StudyPlan;
 use Src\Curriculum\StudyPlan\Infrastructure\Persistence\Repositories\EloquentStudyPlanRepository;
@@ -24,6 +28,8 @@ use Src\IdentityAccess\Role\Domain\Contracts\RoleRepositoryInterface;
 use Src\IdentityAccess\Role\Domain\Entities\Role;
 use Src\IdentityAccess\Role\Infrastructure\Persistence\Repositories\EloquentRoleRepository;
 use Src\IdentityAccess\Role\Presentation\Policies\RolePolicy;
+use Src\Shared\Document\Contracts\DocumentRepositoryInterface;
+use Src\Shared\Document\Infrastructure\EloquentDocumentRepository;
 use Src\Shared\Export\Contracts\ExcelExporterInterface;
 use Src\Shared\Export\Contracts\PdfExporterInterface;
 use Src\Shared\Export\Infrastructure\SpatieExcelExporter;
@@ -46,12 +52,15 @@ final class DomainServiceProvider extends ServiceProvider
         PermissionRepositoryInterface::class => EloquentPermissionRepository::class,
         CourseRepositoryInterface::class => EloquentCourseRepository::class,
         StudyPlanRepositoryInterface::class => EloquentStudyPlanRepository::class,
+        EquivalencyRepositoryInterface::class => EloquentEquivalencyRepository::class,
 
         // Shared, entity-agnostic capabilities rather than per-context ports:
-        // turning rows into a file needs no domain knowledge, so Role,
-        // Permission and every future CRUD resolve the same two adapters.
+        // turning rows into a file, or attaching a document to whatever owns
+        // it, needs no domain knowledge, so Role, Permission, Equivalency and
+        // every future CRUD resolve the same adapters.
         PdfExporterInterface::class => SpatiePdfExporter::class,
         ExcelExporterInterface::class => SpatieExcelExporter::class,
+        DocumentRepositoryInterface::class => EloquentDocumentRepository::class,
     ];
 
     /**
@@ -62,6 +71,7 @@ final class DomainServiceProvider extends ServiceProvider
         Permission::class => PermissionPolicy::class,
         Course::class => CoursePolicy::class,
         StudyPlan::class => StudyPlanPolicy::class,
+        Equivalency::class => EquivalencyPolicy::class,
     ];
 
     public function register(): void
