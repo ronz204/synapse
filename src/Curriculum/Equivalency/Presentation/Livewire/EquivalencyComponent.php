@@ -7,14 +7,17 @@ namespace Src\Curriculum\Equivalency\Presentation\Livewire;
 use App\Livewire\Concerns\InteractsWithDataTable;
 use App\Livewire\Concerns\InteractsWithExports;
 use App\Models\Course as CourseModel;
+use App\Models\Equivalency as EquivalencyModel;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 use Src\Curriculum\Equivalency\Application\UseCases\FindEquivalencyUseCase;
+use Src\Curriculum\Equivalency\Application\UseCases\GetEquivalencyDocumentUseCase;
 use Src\Curriculum\Equivalency\Application\UseCases\ListEquivalenciesUseCase;
 use Src\Curriculum\Equivalency\Application\UseCases\RegisterEquivalencyUseCase;
 use Src\Curriculum\Equivalency\Application\UseCases\ResolveEquivalencyContradictionUseCase;
@@ -144,6 +147,20 @@ class EquivalencyComponent extends Component
     }
 
     /**
+     * Gated on `view`, same as the catalog itself — anyone who can see an
+     * equivalency's row can inspect the resolution that backs it, which is
+     * the whole point of an auditable trail.
+     */
+    public function downloadDocument(int $equivalencyId, FindEquivalencyUseCase $findUseCase, GetEquivalencyDocumentUseCase $documentUseCase): StreamedResponse
+    {
+        $this->authorize('view', $findUseCase->handle($equivalencyId));
+
+        $document = $documentUseCase->handle($equivalencyId);
+
+        return Storage::disk($document->disk)->download($document->path, $document->originalName);
+    }
+
+    /**
      * Reads the still-temporary upload's metadata (safe, read-only) without
      * moving it anywhere permanent — see AttachableDocument's docblock for
      * why the actual move happens later, inside the use case's own
@@ -265,6 +282,11 @@ class EquivalencyComponent extends Component
             'status' => $equivalency->status()->name,
             'isActive' => $equivalency->isActive(),
             'supersededById' => $equivalency->supersededById(),
+            // Surfaces which resolution actually prevailed, so a Superseded
+            // row reads as an auditable trail instead of a dead end.
+            'supersededByResolutionNumber' => $equivalency->supersededById() !== null
+                ? EquivalencyModel::query()->find($equivalency->supersededById())?->resolution_number
+                : null,
         ];
     }
 

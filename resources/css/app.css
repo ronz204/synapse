@@ -876,6 +876,18 @@ select:focus[data-flux-control] {
         color: var(--color-status-danger);
     }
 
+    .action-icon.download {
+        background: var(--color-status-info-subtle);
+        color: var(--color-status-info);
+    }
+
+    .superseded-hint {
+        display: block;
+        font-size: 11px;
+        color: var(--color-text-tertiary);
+        margin-top: 2px;
+    }
+
     /* ---------- modal chrome ---------- */
 
     .modal-backdrop {
@@ -968,7 +980,9 @@ select:focus[data-flux-control] {
     }
 
     .form-field input[type="text"],
-    .form-field textarea {
+    .form-field input[type="file"],
+    .form-field textarea,
+    .form-field select {
         padding: 10px 12px;
         border-radius: 8px;
         border: 1px solid var(--color-border-default);
@@ -979,15 +993,27 @@ select:focus[data-flux-control] {
         width: 100%;
     }
 
+    .form-field select {
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+        background-size: 16px;
+        padding-right: 34px;
+        cursor: pointer;
+    }
+
     .form-field input[type="text"]:focus,
-    .form-field textarea:focus {
+    .form-field textarea:focus,
+    .form-field select:focus {
         outline: none;
         border-color: var(--color-border-brand);
         box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-border-brand) 12%, transparent);
     }
 
     .form-field input.has-error,
-    .form-field textarea.has-error {
+    .form-field textarea.has-error,
+    .form-field select.has-error {
         border-color: var(--color-status-danger);
     }
 

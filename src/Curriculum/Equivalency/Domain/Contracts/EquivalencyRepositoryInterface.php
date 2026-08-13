@@ -9,6 +9,7 @@ use Src\Curriculum\Equivalency\Domain\Entities\Equivalency;
 use Src\Curriculum\Equivalency\Domain\ValueObjects\CourseNode;
 use Src\Curriculum\Equivalency\Domain\ValueObjects\EquivalencyEdge;
 use Src\Shared\Document\Contracts\AttachableDocument;
+use Src\Shared\Document\Contracts\StoredDocument;
 
 /**
  * Port (in the Hexagonal sense) that Infrastructure adapters must
@@ -62,4 +63,11 @@ interface EquivalencyRepositoryInterface
      * at the candidate. Neither record is ever discarded or deleted.
      */
     public function resolveContradiction(Equivalency $candidate, AttachableDocument $candidateDocument, int $existingEquivalencyId, bool $candidatePrevails): Equivalency;
+
+    /**
+     * The resolution document attached to this equivalency, if any — every
+     * Active/Superseded row has exactly one (registration requires it), so a
+     * null result only ever means the id itself doesn't exist.
+     */
+    public function findDocument(int $equivalencyId): ?StoredDocument;
 }

@@ -14,7 +14,7 @@
         :sort-key="$sortKey"
         :sort-dir="$sortDir"
         :per-page="$perPage"
-        table-cols="1fr 1fr 1fr 1fr 1fr"
+        table-cols="1fr 1fr 1fr 1fr 1fr 0.6fr"
         :can-create="Auth::user()->can('create', \Src\Curriculum\Equivalency\Domain\Entities\Equivalency::class)"
         :can-export-pdf="Auth::user()->can('exportPdf', \Src\Curriculum\Equivalency\Domain\Entities\Equivalency::class)"
         :can-export-excel="Auth::user()->can('exportExcel', \Src\Curriculum\Equivalency\Domain\Entities\Equivalency::class)"
@@ -32,9 +32,22 @@
                 <span x-text="row.resolutionNumber"></span>
                 <span>
                     <span class="status-badge system" x-show="row.isActive">{{ __('Active') }}</span>
-                    <span class="status-badge custom" x-show="!row.isActive">{{ __('Superseded') }}</span>
+                    <template x-if="!row.isActive">
+                        <div>
+                            <span class="status-badge custom">{{ __('Superseded') }}</span>
+                            <span class="superseded-hint" x-show="row.supersededByResolutionNumber" x-text="'{{ __('by') }} ' + row.supersededByResolutionNumber"></span>
+                        </div>
+                    </template>
                 </span>
-                <div class="actions-cell"></div>
+                <div class="actions-cell">
+                    <button type="button" class="action-icon download" wire:click="downloadDocument(row.id)" title="{{ __('Download resolution') }}" aria-label="{{ __('Download resolution') }}">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                    </button>
+                </div>
             </div>
         </template>
         <div class="empty-row" x-show="pageRows.length === 0">{{ __('No records found') }}</div>
@@ -51,9 +64,20 @@
                 <span class="status-badge system">{{ __('Active') }}</span>
                 @else
                 <span class="status-badge custom">{{ __('Superseded') }}</span>
+                @if ($equivalency['supersededByResolutionNumber'])
+                <span class="superseded-hint">{{ __('by :number', ['number' => $equivalency['supersededByResolutionNumber']]) }}</span>
+                @endif
                 @endif
             </span>
-            <div class="actions-cell"></div>
+            <div class="actions-cell">
+                <button type="button" class="action-icon download" wire:click="downloadDocument({{ $equivalency['id'] }})" title="{{ __('Download resolution') }}" aria-label="{{ __('Download resolution') }}">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                </button>
+            </div>
         </div>
         @empty
         <div class="empty-row">{{ __('No records found') }}</div>

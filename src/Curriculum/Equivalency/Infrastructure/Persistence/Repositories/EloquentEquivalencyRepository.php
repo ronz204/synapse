@@ -17,6 +17,7 @@ use Src\Curriculum\Equivalency\Domain\Services\DirectionEdgeOrientation;
 use Src\Curriculum\Equivalency\Domain\ValueObjects\CourseNode;
 use Src\Shared\Document\Contracts\AttachableDocument;
 use Src\Shared\Document\Contracts\DocumentRepositoryInterface;
+use Src\Shared\Document\Contracts\StoredDocument;
 
 final class EloquentEquivalencyRepository implements EquivalencyRepositoryInterface
 {
@@ -157,6 +158,11 @@ final class EloquentEquivalencyRepository implements EquivalencyRepositoryInterf
 
             return $this->toDomain($candidateRow);
         });
+    }
+
+    public function findDocument(int $equivalencyId): ?StoredDocument
+    {
+        return $this->documents->findFor(EquivalencyModel::class, $equivalencyId);
     }
 
     /**
