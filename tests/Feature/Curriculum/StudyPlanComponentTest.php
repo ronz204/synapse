@@ -1,0 +1,216 @@
+<?php
+
+declare(strict_types=1);
+
+use App\Enums\PlanClassification;
+use App\Models\Course;
+use App\Models\Level;
+use App\Models\Prerequisite;
+use App\Models\Program;
+use App\Models\Student;
+use App\Models\StudentPlan;
+use App\Models\StudyPlan;
+use Livewire\Livewire;
+use Src\Curriculum\StudyPlan\Application\UseCases\GetActiveStudentCountsUseCase;
+use Src\Curriculum\StudyPlan\Presentation\Livewire\StudyPlanComponent;
+
+it('blocks mounting the component for a user without study_plans.view', function (): void {
+    $user = userWithPermissions([]);
+
+    Livewire::actingAs($user)->test(StudyPlanComponent::class)->assertForbidden();
+});
+
+it('blocks creating a plan for a user without study_plans.create', function (): void {
+    $user = userWithPermissions(['study_plans.view']);
+    $program = Program::factory()->create();
+
+    Livewire::actingAs($user)
+        ->test(StudyPlanComponent::class)
+        ->set('form.programId', $program->id)
+        ->set('form.name', 'Plan 2024')
+        ->set('form.implementationYear', '2024')
+        ->set('form.classification', PlanClassification::Active->value)
+        ->call('save')
+        ->assertForbidden();
+});
+
+it('creates an Active plan with no closing date', function (): void {
+    $user = userWithPermissions(['study_plans.view', 'study_plans.create']);
+    $program = Program::factory()->create();
+
+    Livewire::actingAs($user)
+        ->test(StudyPlanComponent::class)
+        ->set('form.programId', $program->id)
+        ->set('form.name', 'Plan 2024')
+        ->set('form.implementationYear', '2024')
+        ->set('form.classification', PlanClassification::Active->value)
+        ->call('save')
+        ->assertOk()
+        ->assertHasNoErrors();
+
+    expect(StudyPlan::query()->where('name', 'Plan 2024')->exists())->toBeTrue();
+});
+
+it('blocks saving a Terminal plan with no enrollment closing date', function (): void {
+    $user = userWithPermissions(['study_plans.view', 'study_plans.create']);
+    $program = Program::factory()->create();
+
+    Livewire::actingAs($user)
+        ->test(StudyPlanComponent::class)
+        ->set('form.programId', $program->id)
+        ->set('form.name', 'Terminal Plan 2018')
+        ->set('form.implementationYear', '2018')
+        ->set('form.classification', PlanClassification::Terminal->value)
+        ->set('form.enrollmentClosingDate', null)
+        ->call('save')
+        ->assertHasErrors(['form.enrollmentClosingDate']);
+
+    expect(StudyPlan::query()->where('name', 'Terminal Plan 2018')->exists())->toBeFalse();
+});
+
+it('creates a Terminal plan when a closing date is supplied', function (): void {
+    $user = userWithPermissions(['study_plans.view', 'study_plans.create']);
+    $program = Program::factory()->create();
+
+    Livewire::actingAs($user)
+        ->test(StudyPlanComponent::class)
+        ->set('form.programId', $program->id)
+        ->set('form.name', 'Terminal Plan 2018')
+        ->set('form.implementationYear', '2018')
+        ->set('form.classification', PlanClassification::Terminal->value)
+        ->set('form.enrollmentClosingDate', now()->addYear()->format('Y-m-d'))
+        ->call('save')
+        ->assertOk()
+        ->assertHasNoErrors();
+
+    expect(StudyPlan::query()->where('name', 'Terminal Plan 2018')->exists())->toBeTrue();
+});
+
+it('displays a Terminal plan\'s enrollment closing date in the catalog', function (): void {
+    $user = userWithPermissions(['study_plans.view']);
+    $program = Program::factory()->create();
+    $plan = StudyPlan::factory()->terminal()->create(['program_id' => $program->id]);
+
+    Livewire::actingAs($user)
+        ->test(StudyPlanComponent::class)
+        ->assertSee($plan->enrollment_closing_date->format('Y-m-d'));
+});
+
+it('shows a plan\'s full structure: levels, linked courses and prerequisites', function (): void {
+    $user = userWithPermissions(['study_plans.view']);
+    $program = Program::factory()->create();
+    $plan = StudyPlan::factory()->create(['program_id' => $program->id]);
+
+    $level = Level::factory()->create(['study_plan_id' => $plan->id, 'number' => 1]);
+    $courseA = Course::factory()->create(['program_id' => $program->id, 'code' => 'STR-101']);
+    $courseB = Course::factory()->create(['program_id' => $program->id, 'code' => 'STR-102']);
+    $level->courses()->attach([$courseA->id => ['credits' => 4], $courseB->id => ['credits' => 3]]);
+
+    $plan->prerequisites()->create([
+        'required_course_id' => $courseA->id,
+        'dependent_course_id' => $courseB->id,
+    ]);
+
+    Livewire::actingAs($user)
+        ->test(StudyPlanComponent::class)
+        ->call('viewStructure', $plan->id)
+        ->assertSee('STR-101')
+        ->assertSee('STR-102')
+        ->assertSee((string) $level->number);
+});
+
+it('blocks a prerequisite whose course is not linked to the plan', function (): void {
+    $user = userWithPermissions(['study_plans.view', 'study_plans.edit']);
+    $program = Program::factory()->create();
+    $plan = StudyPlan::factory()->create(['program_id' => $program->id]);
+    $linkedCourse = Course::factory()->create(['program_id' => $program->id]);
+    $unlinkedCourse = Course::factory()->create(['program_id' => $program->id]);
+
+    Livewire::actingAs($user)
+        ->test(StudyPlanComponent::class)
+        ->call('viewStructure', $plan->id)
+        ->set('structureLevels', [
+            ['key' => 'lvl-1', 'id' => null, 'number' => 1, 'courses' => [
+                ['course_id' => $linkedCourse->id, 'credits' => 4],
+            ]],
+        ])
+        ->set('structurePrerequisites', [
+            ['key' => "{$linkedCourse->id}-{$unlinkedCourse->id}", 'required_course_id' => $linkedCourse->id, 'dependent_course_id' => $unlinkedCourse->id],
+        ])
+        ->call('saveStructure')
+        ->assertDispatched('toast', variant: 'danger');
+
+    expect(Prerequisite::query()->where('study_plan_id', $plan->id)->count())->toBe(0);
+});
+
+it('blocks a prerequisite where required and dependent are the same course', function (): void {
+    $user = userWithPermissions(['study_plans.view', 'study_plans.edit']);
+    $program = Program::factory()->create();
+    $plan = StudyPlan::factory()->create(['program_id' => $program->id]);
+    $course = Course::factory()->create(['program_id' => $program->id]);
+
+    Livewire::actingAs($user)
+        ->test(StudyPlanComponent::class)
+        ->call('viewStructure', $plan->id)
+        ->set('structureLevels', [
+            ['key' => 'lvl-1', 'id' => null, 'number' => 1, 'courses' => [
+                ['course_id' => $course->id, 'credits' => 4],
+            ]],
+        ])
+        ->set('structurePrerequisites', [
+            ['key' => "{$course->id}-{$course->id}", 'required_course_id' => $course->id, 'dependent_course_id' => $course->id],
+        ])
+        ->call('saveStructure')
+        ->assertDispatched('toast', variant: 'danger');
+
+    expect(Prerequisite::query()->where('study_plan_id', $plan->id)->count())->toBe(0);
+});
+
+it('saves a valid structure end to end through the component', function (): void {
+    $user = userWithPermissions(['study_plans.view', 'study_plans.edit']);
+    $program = Program::factory()->create();
+    $plan = StudyPlan::factory()->create(['program_id' => $program->id]);
+    $courseA = Course::factory()->create(['program_id' => $program->id]);
+    $courseB = Course::factory()->create(['program_id' => $program->id]);
+
+    Livewire::actingAs($user)
+        ->test(StudyPlanComponent::class)
+        ->call('viewStructure', $plan->id)
+        ->set('structureLevels', [
+            ['key' => 'lvl-1', 'id' => null, 'number' => 1, 'courses' => [
+                ['course_id' => $courseA->id, 'credits' => 4],
+                ['course_id' => $courseB->id, 'credits' => 3],
+            ]],
+        ])
+        ->set('structurePrerequisites', [
+            ['key' => "{$courseA->id}-{$courseB->id}", 'required_course_id' => $courseA->id, 'dependent_course_id' => $courseB->id],
+        ])
+        ->call('saveStructure')
+        ->assertDispatched('toast', variant: 'success');
+
+    expect(Level::query()->where('study_plan_id', $plan->id)->count())->toBe(1);
+    expect(Prerequisite::query()->where('study_plan_id', $plan->id)->count())->toBe(1);
+
+    $level = Level::query()->where('study_plan_id', $plan->id)->first();
+    expect($level->courses()->count())->toBe(2);
+});
+
+it('returns the correct count of currently active students per plan and level', function (): void {
+    $program = Program::factory()->create();
+    $plan = StudyPlan::factory()->create(['program_id' => $program->id]);
+
+    $activeLevel1 = Student::factory()->create(['active' => true]);
+    $activeLevel1b = Student::factory()->create(['active' => true]);
+    $activeLevel2 = Student::factory()->create(['active' => true]);
+    $inactiveLevel1 = Student::factory()->create(['active' => false]);
+
+    StudentPlan::query()->create(['student_id' => $activeLevel1->id, 'study_plan_id' => $plan->id, 'current_level' => 1]);
+    StudentPlan::query()->create(['student_id' => $activeLevel1b->id, 'study_plan_id' => $plan->id, 'current_level' => 1]);
+    StudentPlan::query()->create(['student_id' => $activeLevel2->id, 'study_plan_id' => $plan->id, 'current_level' => 2]);
+    StudentPlan::query()->create(['student_id' => $inactiveLevel1->id, 'study_plan_id' => $plan->id, 'current_level' => 1]);
+
+    $counts = app(GetActiveStudentCountsUseCase::class)->handle($plan->id);
+
+    expect($counts[1])->toBe(2);
+    expect($counts[2])->toBe(1);
+});
