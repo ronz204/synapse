@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Src\Curriculum\Equivalency\Domain\Contracts\EquivalencyRepositoryInterface;
 use Src\Curriculum\Equivalency\Domain\Entities\Equivalency;
+use Src\Curriculum\Equivalency\Domain\Events\EquivalencyBecameActive;
 use Src\Curriculum\Equivalency\Domain\Services\DirectionEdgeOrientation;
 use Src\Curriculum\Equivalency\Domain\ValueObjects\CourseNode;
 use Src\Shared\Document\Contracts\AttachableDocument;
@@ -102,7 +103,7 @@ final class EloquentEquivalencyRepository implements EquivalencyRepositoryInterf
 
     public function register(Equivalency $equivalency, AttachableDocument $document): Equivalency
     {
-        return DB::transaction(function () use ($equivalency, $document): Equivalency {
+        $result = DB::transaction(function () use ($equivalency, $document): Equivalency {
             // `status` is deliberately not fillable (see the model's own
             // docblock), so a plain create() would silently drop it from the
             // INSERT itself and fall through to the DB's own Vigente
@@ -122,11 +123,17 @@ final class EloquentEquivalencyRepository implements EquivalencyRepositoryInterf
 
             return $this->toDomain($row);
         });
+
+        // Dispatched only after the transaction above has already committed
+        // — never inside the closure — so a rollback can never fire it.
+        event(new EquivalencyBecameActive($result->id()));
+
+        return $result;
     }
 
     public function resolveContradiction(Equivalency $candidate, AttachableDocument $candidateDocument, int $existingEquivalencyId, bool $candidatePrevails): Equivalency
     {
-        return DB::transaction(function () use ($candidate, $candidateDocument, $existingEquivalencyId, $candidatePrevails): Equivalency {
+        $result = DB::transaction(function () use ($candidate, $candidateDocument, $existingEquivalencyId, $candidatePrevails): Equivalency {
             $existing = EquivalencyModel::query()->findOrFail($existingEquivalencyId);
 
             // When the candidate prevails, the existing row must be demoted
@@ -158,6 +165,14 @@ final class EloquentEquivalencyRepository implements EquivalencyRepositoryInterf
 
             return $this->toDomain($candidateRow);
         });
+
+        // Only the candidate winning makes a *new* equivalency Active — if
+        // the existing one prevailed, nothing changed that needs sweeping.
+        if ($candidatePrevails) {
+            event(new EquivalencyBecameActive($result->id()));
+        }
+
+        return $result;
     }
 
     public function findDocument(int $equivalencyId): ?StoredDocument
