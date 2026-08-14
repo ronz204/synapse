@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\StudentAcademicRecord;
+use App\Observers\StudentAcademicRecordObserver;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -24,6 +26,11 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+
+        // StudentAcademicRecord isn't part of any hexagonal bounded context
+        // yet, so its observer is registered here rather than in
+        // DomainServiceProvider (reserved for src/*/*/... wiring).
+        StudentAcademicRecord::observe(StudentAcademicRecordObserver::class);
     }
 
     /**

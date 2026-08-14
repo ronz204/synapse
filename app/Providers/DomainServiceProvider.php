@@ -4,16 +4,23 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Events\AcademicRecordMarkedPassed;
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
+use Src\Curriculum\Accreditation\Domain\Contracts\AccreditationRepositoryInterface;
+use Src\Curriculum\Accreditation\Infrastructure\Persistence\Repositories\EloquentAccreditationRepository;
+use Src\Curriculum\Accreditation\Presentation\Listeners\GrantAccreditationOnAcademicRecordPassed;
+use Src\Curriculum\Accreditation\Presentation\Listeners\SweepEquivalencyOnBecameActive;
 use Src\Curriculum\Course\Domain\Contracts\CourseRepositoryInterface;
 use Src\Curriculum\Course\Domain\Entities\Course;
 use Src\Curriculum\Course\Infrastructure\Persistence\Repositories\EloquentCourseRepository;
 use Src\Curriculum\Course\Presentation\Policies\CoursePolicy;
 use Src\Curriculum\Equivalency\Domain\Contracts\EquivalencyRepositoryInterface;
 use Src\Curriculum\Equivalency\Domain\Entities\Equivalency;
+use Src\Curriculum\Equivalency\Domain\Events\EquivalencyBecameActive;
 use Src\Curriculum\Equivalency\Infrastructure\Persistence\Repositories\EloquentEquivalencyRepository;
 use Src\Curriculum\Equivalency\Presentation\Policies\EquivalencyPolicy;
 use Src\Curriculum\StudyPlan\Domain\Contracts\StudyPlanRepositoryInterface;
@@ -53,6 +60,7 @@ final class DomainServiceProvider extends ServiceProvider
         CourseRepositoryInterface::class => EloquentCourseRepository::class,
         StudyPlanRepositoryInterface::class => EloquentStudyPlanRepository::class,
         EquivalencyRepositoryInterface::class => EloquentEquivalencyRepository::class,
+        AccreditationRepositoryInterface::class => EloquentAccreditationRepository::class,
 
         // Shared, entity-agnostic capabilities rather than per-context ports:
         // turning rows into a file, or attaching a document to whatever owns
@@ -74,6 +82,19 @@ final class DomainServiceProvider extends ServiceProvider
         Equivalency::class => EquivalencyPolicy::class,
     ];
 
+    /**
+     * Domain events mapped to the listener(s) that react to them — the same
+     * single-place-for-wiring convention as $domainBindings/$domainPolicies,
+     * used instead of Laravel's app/Listeners auto-discovery because these
+     * listeners live inside their own bounded context's folder.
+     *
+     * @var array<class-string, array<int, class-string>>
+     */
+    private array $domainListeners = [
+        EquivalencyBecameActive::class => [SweepEquivalencyOnBecameActive::class],
+        AcademicRecordMarkedPassed::class => [GrantAccreditationOnAcademicRecordPassed::class],
+    ];
+
     public function register(): void
     {
         foreach ($this->domainBindings as $interface => $implementation) {
@@ -85,6 +106,7 @@ final class DomainServiceProvider extends ServiceProvider
     {
         $this->registerPolicies();
         $this->registerSuperAdminBypass();
+        $this->registerDomainListeners();
         $this->loadContextRoutes();
     }
 
@@ -92,6 +114,15 @@ final class DomainServiceProvider extends ServiceProvider
     {
         foreach ($this->domainPolicies as $entity => $policy) {
             Gate::policy($entity, $policy);
+        }
+    }
+
+    private function registerDomainListeners(): void
+    {
+        foreach ($this->domainListeners as $event => $listeners) {
+            foreach ($listeners as $listener) {
+                Event::listen($event, $listener);
+            }
         }
     }
 
