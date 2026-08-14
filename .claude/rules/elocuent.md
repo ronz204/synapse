@@ -82,20 +82,19 @@ Scopes, casts, and relationships belong on the model. Business rules that decide
 
 ## Wrap Multi-Step Writes in Transactions
 
-Several flows in this system are one unit of work spanning more than one table: saving an `Equivalency` and, on success, writing the resulting `AccreditationRecord`s (RC-02b); saving a `CourseModality` alongside its `Resolution`. A failure partway must not leave the equivalency graph or modality catalog half-written.
+A flow that writes more than one row as a single unit of work must not be allowed to leave that unit half-written. Registering an `Equivalency` alongside its resolution document is one such case: the equivalency row and its attached document are meaningless without each other, so both writes go inside the same `DB::transaction()`.
 
 ```php
-DB::transaction(function () use ($equivalencyData, $matchingStudents) {
-    $equivalency = Equivalency::create($equivalencyData);
+DB::transaction(function () use ($equivalencyData, $document) {
+    // status is deliberately non-fillable — see "Never Leave a Model
+    // Mass-Assignment-Open" below — so this one write uses forceCreate().
+    $equivalency = Equivalency::query()->forceCreate($equivalencyData);
 
-    foreach ($matchingStudents as $record) {
-        AccreditationRecord::create([
-            'student_academic_record_id' => $record->id,
-            'equivalency_id' => $equivalency->id,
-        ]);
-    }
+    $documents->attach($document, Equivalency::class, $equivalency->id);
 });
 ```
+
+Not every downstream effect belongs inside that same transaction, though. A write triggered by the first one's success — such as accrediting every already-qualifying student once an equivalency becomes Active (RC-02b) — is its own unit of work, not an extension of the first: it reacts to the equivalency having been durably committed, through a domain event dispatched only *after* the transaction returns, and each resulting accreditation row is its own independent insert, backed by its own uniqueness constraint rather than the original transaction's atomicity. Folding it into the equivalency's own transaction would make that write depend on an unrelated aggregate's success and needlessly widen its lock scope.
 
 ## Model Historical State as a Status, Not a Deletion
 
