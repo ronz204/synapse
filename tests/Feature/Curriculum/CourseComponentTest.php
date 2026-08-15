@@ -98,7 +98,6 @@ it('defaults a course with no modality specified to Presencial', function (): vo
         ->set('form.code', 'INF-103')
         ->set('form.name', 'Programming III')
         ->set('form.programId', $program->id)
-        ->set('form.modalityId', null)
         ->call('save')
         ->assertOk();
 
@@ -131,20 +130,24 @@ it('deactivates rather than deletes a course row', function (): void {
     expect($course->fresh()->active)->toBeFalse();
 });
 
-it('lets modality be selected explicitly instead of the default', function (): void {
-    $user = userWithPermissions(['courses.view', 'courses.create']);
+it('never changes a course\'s modality through the edit modal (RC-03 gate cannot be bypassed via courses.edit)', function (): void {
+    // CourseForm no longer exposes a modality field at all — reassigning a
+    // course's modality is exclusively AssignModalityToCourseUseCase's job
+    // (RC-03), which runs the write-time resolution gate. Editing a course
+    // here must leave modality_id untouched no matter what else changes.
+    $user = userWithPermissions(['courses.view', 'courses.create', 'courses.edit']);
     $program = Program::factory()->create();
     $modality = Modality::factory()->create(['name' => 'Virtual']);
+    $course = Course::factory()->create(['program_id' => $program->id, 'modality_id' => $modality->id]);
 
     Livewire::actingAs($user)
         ->test(CourseComponent::class)
-        ->set('form.code', 'INF-104')
-        ->set('form.name', 'Programming IV')
-        ->set('form.programId', $program->id)
-        ->set('form.modalityId', $modality->id)
+        ->call('openEditModal', $course->id)
+        ->set('form.name', 'Programming IV (renamed)')
         ->call('save')
         ->assertOk();
 
-    $course = Course::query()->where('code', 'INF-104')->first();
+    $course->refresh();
+    expect($course->name)->toBe('Programming IV (renamed)');
     expect($course->modality_id)->toBe($modality->id);
 });
