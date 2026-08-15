@@ -25,8 +25,6 @@ class CourseForm extends Form
 
     public ?int $programId = null;
 
-    public ?int $modalityId = null;
-
     public bool $isService = false;
 
     public bool $isBottleneck = false;
@@ -56,7 +54,6 @@ class CourseForm extends Form
                 'exists:programs,id',
                 Rule::requiredIf(fn () => ! $this->isService),
             ],
-            'modalityId' => ['nullable', 'exists:modalities,id'],
             'isService' => ['boolean'],
             'isBottleneck' => ['boolean'],
             'requiresLaboratory' => ['boolean'],
@@ -73,7 +70,6 @@ class CourseForm extends Form
         $this->code = $course->code();
         $this->name = $course->name();
         $this->programId = $course->programId();
-        $this->modalityId = $course->modalityId();
         $this->isService = $course->isService();
         $this->isBottleneck = $course->isBottleneck();
         $this->requiresLaboratory = $course->requiresLaboratory();
@@ -86,7 +82,6 @@ class CourseForm extends Form
             code: $this->code,
             name: $this->name,
             programId: $this->programId,
-            modalityId: $this->modalityId,
             isService: $this->isService,
             isBottleneck: $this->isBottleneck,
             requiresLaboratory: $this->requiresLaboratory,

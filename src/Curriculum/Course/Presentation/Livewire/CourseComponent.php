@@ -7,7 +7,7 @@ namespace Src\Curriculum\Course\Presentation\Livewire;
 use App\Enums\LaboratoryType;
 use App\Livewire\Concerns\InteractsWithDataTable;
 use App\Livewire\Concerns\InteractsWithExports;
-use App\Models\Modality;
+use App\Models\Modality as ModalityModel;
 use App\Models\Program;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -48,6 +48,13 @@ class CourseComponent extends Component
      */
     public ?int $editingId = null;
 
+    /**
+     * The course's current modality id while editing, read-only display
+     * only (RC-03) — never bound to CourseForm, since reassigning modality
+     * is exclusively the gated /modality-assignments flow's job.
+     */
+    public ?int $editingModalityId = null;
+
     public CourseForm $form;
 
     public function mount(): void
@@ -61,6 +68,7 @@ class CourseComponent extends Component
         $this->authorize('create', Course::class);
 
         $this->editingId = null;
+        $this->editingModalityId = null;
         $this->form->reset();
         $this->resetValidation();
         $this->showModal = true;
@@ -73,6 +81,7 @@ class CourseComponent extends Component
         $this->authorize('update', $course);
 
         $this->editingId = $id;
+        $this->editingModalityId = $course->modalityId();
         $this->form->fromEntity($course);
         $this->resetValidation();
         $this->showModal = true;
@@ -157,8 +166,8 @@ class CourseComponent extends Component
 
         return $view
             ->with('programOptions', $this->programOptions())
-            ->with('modalityOptions', $this->modalityOptions())
-            ->with('laboratoryTypeOptions', LaboratoryType::cases());
+            ->with('laboratoryTypeOptions', LaboratoryType::cases())
+            ->with('modalityNames', $this->modalityNames());
     }
 
     private function renderClientMode(ListCoursesUseCase $useCase): View
@@ -194,11 +203,17 @@ class CourseComponent extends Component
 
     /**
      * Plain-array projection handed to Alpine as JSON — keeps the Domain
-     * Entity from ever leaking past the Presentation boundary.
+     * Entity from ever leaking past the Presentation boundary. Modality is
+     * read-only here (RC-03): reassigning it happens exclusively through
+     * the gated /modality-assignments flow, never this component's own
+     * create/edit modal (see CreateCourseUseCase/UpdateCourseUseCase).
      *
+     * @param  array<int, string>  $modalityNames  id => name, pragmatic
+     *                                             cross-aggregate read, same coupling EquivalencyComponent
+     *                                             already uses for course codes.
      * @return array<string, mixed>
      */
-    private function toRow(Course $course): array
+    private function toRow(Course $course, array $modalityNames): array
     {
         return [
             'id' => $course->id(),
@@ -208,6 +223,7 @@ class CourseComponent extends Component
             'isBottleneck' => $course->isBottleneck(),
             'requiresLaboratory' => $course->requiresLaboratory(),
             'active' => $course->isActive(),
+            'modalityName' => $course->modalityId() !== null ? ($modalityNames[$course->modalityId()] ?? null) : null,
         ];
     }
 
@@ -216,7 +232,12 @@ class CourseComponent extends Component
      */
     private function freshRows(ListCoursesUseCase $useCase): array
     {
-        return array_map($this->toRow(...), $useCase->all(sortBy: $this->sortKey, sortDir: $this->sortDir));
+        $modalityNames = $this->modalityNames();
+
+        return array_map(
+            fn (Course $course) => $this->toRow($course, $modalityNames),
+            $useCase->all(sortBy: $this->sortKey, sortDir: $this->sortDir),
+        );
     }
 
     /**
@@ -225,15 +246,24 @@ class CourseComponent extends Component
     private function exportableRows(ListCoursesUseCase $useCase, ?string $search): array
     {
         $candidate = filled($search) ? $search : $this->search;
+        $modalityNames = $this->modalityNames();
 
         return array_map(
-            $this->toRow(...),
+            fn (Course $course) => $this->toRow($course, $modalityNames),
             $useCase->all(
                 search: $candidate !== '' ? $candidate : null,
                 sortBy: $this->sortKey,
                 sortDir: $this->sortDir,
             ),
         );
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function modalityNames(): array
+    {
+        return ModalityModel::query()->pluck('name', 'id')->all();
     }
 
     /**
@@ -245,6 +275,7 @@ class CourseComponent extends Component
             ['key' => 'code', 'label' => __('Code')],
             ['key' => 'name', 'label' => __('Name')],
             ['key' => 'isService', 'label' => __('Service course'), 'format' => fn (bool $v): string => $v ? __('Yes') : __('No')],
+            ['key' => 'modalityName', 'label' => __('Modality')],
             ['key' => 'active', 'label' => __('Status'), 'format' => fn (bool $v): string => $v ? __('Active') : __('Inactive')],
         ];
     }
@@ -256,16 +287,6 @@ class CourseComponent extends Component
     {
         return Program::query()->active()->orderBy('name')->get(['id', 'name'])
             ->map(fn (Program $program) => ['id' => $program->id, 'name' => $program->name])
-            ->all();
-    }
-
-    /**
-     * @return array<int, array{id: int, name: string}>
-     */
-    private function modalityOptions(): array
-    {
-        return Modality::query()->orderBy('name')->get(['id', 'name'])
-            ->map(fn (Modality $modality) => ['id' => $modality->id, 'name' => $modality->name])
             ->all();
     }
 }

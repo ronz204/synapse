@@ -17,6 +17,7 @@
                 ['key' => 'code', 'label' => __('Code'), 'sortable' => true],
                 ['key' => 'name', 'label' => __('Name'), 'sortable' => true],
                 ['key' => 'isService', 'label' => __('Service'), 'sortable' => false],
+                ['key' => 'modalityName', 'label' => __('Modality'), 'sortable' => false],
                 ['key' => 'active', 'label' => __('Status'), 'sortable' => false],
             ]"
         :mode="$tableMode"
@@ -26,7 +27,7 @@
         :sort-key="$sortKey"
         :sort-dir="$sortDir"
         :per-page="$perPage"
-        table-cols="1fr 2fr 1fr 1fr 0.8fr"
+        table-cols="1fr 2fr 1fr 1fr 1fr 0.8fr"
         :can-create="Auth::user()->can('create', \Src\Curriculum\Course\Domain\Entities\Course::class)"
         :can-export-pdf="Auth::user()->can('exportPdf', \Src\Curriculum\Course\Domain\Entities\Course::class)"
         :can-export-excel="Auth::user()->can('exportExcel', \Src\Curriculum\Course\Domain\Entities\Course::class)"
@@ -43,6 +44,7 @@
                     <span class="status-badge system" x-show="row.isService">{{ __('Service') }}</span>
                     <span class="status-badge custom" x-show="!row.isService">{{ __('Program') }}</span>
                 </span>
+                <span x-text="row.modalityName ?? '{{ __('Default (Presencial)') }}'"></span>
                 <span>
                     <span class="status-badge system" x-show="row.active">{{ __('Active') }}</span>
                     <span class="status-badge custom" x-show="!row.active">{{ __('Inactive') }}</span>
@@ -71,6 +73,7 @@
                 <span class="status-badge custom">{{ __('Program') }}</span>
                 @endif
             </span>
+            <span>{{ $modalityNames[$course->modalityId()] ?? __('Default (Presencial)') }}</span>
             <span>
                 @if ($course->isActive())
                 <span class="status-badge system">{{ __('Active') }}</span>
@@ -125,15 +128,15 @@
         </div>
         @endif
 
+        @if ($editingId !== null)
         <div class="form-field">
-            <label for="courseModality">{{ __('Modality') }}</label>
-            <select id="courseModality" wire:model="form.modalityId">
-                <option value="">{{ __('Default (Presencial)') }}</option>
-                @foreach ($modalityOptions as $modality)
-                <option value="{{ $modality['id'] }}">{{ $modality['name'] }}</option>
-                @endforeach
-            </select>
+            <label>{{ __('Modality') }}</label>
+            <p class="text-sm">
+                {{ $modalityNames[$editingModalityId] ?? __('Default (Presencial)') }} —
+                <a href="{{ route('curriculum.modality_assignment.index') }}" wire:navigate>{{ __('Reassign modality') }}</a>
+            </p>
         </div>
+        @endif
 
         <div class="form-field">
             <label>
