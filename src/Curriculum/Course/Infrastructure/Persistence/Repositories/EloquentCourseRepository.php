@@ -9,6 +9,7 @@ use App\Models\Modality as ModalityModel;
 use Illuminate\Database\Eloquent\Collection;
 use Src\Curriculum\Course\Domain\Contracts\CourseRepositoryInterface;
 use Src\Curriculum\Course\Domain\Entities\Course;
+use Src\Curriculum\Modality\Domain\Services\DefaultModalityRule;
 
 final class EloquentCourseRepository implements CourseRepositoryInterface
 {
@@ -98,17 +99,15 @@ final class EloquentCourseRepository implements CourseRepositoryInterface
     }
 
     /**
-     * Resolves the RC-01 default-modality rule ("a course with no modality
-     * specified defaults to Presencial") the same way CourseFactory already
-     * does, so a course created without picking a modality still gets one.
-     * Not a dedicated ModalityRepository port: modality catalog management
-     * belongs to the (separate, not-yet-built) RC-03 slice — this is just
-     * the one lookup RC-01's own acceptance criteria requires.
+     * Resolves the default-modality rule ("a course with no modality
+     * specified defaults to Presencial") by name, via RC-03's
+     * DefaultModalityRule — the single source of truth for that name, no
+     * longer hardcoded here and in CourseFactory separately.
      */
     private function defaultModalityId(): int
     {
         return ModalityModel::query()->firstOrCreate(
-            ['name' => 'Presencial'],
+            ['name' => DefaultModalityRule::name()],
             ['requires_resolution' => false],
         )->id;
     }

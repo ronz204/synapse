@@ -29,7 +29,11 @@ final class UpdateCourseUseCase
             requiresLaboratory: $dto->requiresLaboratory,
             laboratoryType: $dto->laboratoryType,
         );
-        $course->assignModality($dto->modalityId);
+        // Modality is deliberately untouched here (RC-03): reassigning a
+        // course's modality is exclusively AssignModalityToCourseUseCase's
+        // job, which runs the write-time resolution gate. This use case
+        // must never mutate modalityId, or that gate becomes trivially
+        // bypassable via a plain course edit.
 
         return $this->repository->save($course);
     }
