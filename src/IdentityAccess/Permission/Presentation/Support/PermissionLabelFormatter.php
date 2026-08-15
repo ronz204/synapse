@@ -32,6 +32,8 @@ final class PermissionLabelFormatter
         'courses' => 'cursos',
         'study_plans' => 'planes de estudio',
         'equivalencies' => 'equiparaciones',
+        'modalities' => 'modalidades',
+        'modality_resolutions' => 'resoluciones de modalidad',
     ];
 
     public static function forHumans(string $module, string $action): string
