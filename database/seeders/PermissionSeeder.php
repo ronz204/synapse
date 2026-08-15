@@ -46,19 +46,28 @@ class PermissionSeeder extends Seeder
         // equivalencies has neither `.edit` nor `.delete` (an Equivalency is
         // append-only), but has its own `.resolve_contradiction`, distinct
         // from `.create` — registering and resolving a contradiction are
-        // separate authorizations per the RC-02 spec.
+        // separate authorizations per the RC-02 spec. modalities is a real
+        // catalog with a real `.delete` (guarded by an in-use check).
+        // modality_resolutions has neither `.edit` nor `.delete` (a
+        // resolution is never edited or deleted once filed) — its `.create`
+        // covers the combined "assign a modality (with its resolution) to a
+        // course" action, a separate authorization from modalities.* per the
+        // RC-03 spec.
         $moduleSubjects = [
             'roles' => 'roles',
             'permissions' => 'permisos',
             'courses' => 'cursos',
             'study_plans' => 'planes de estudio',
             'equivalencies' => 'equiparaciones',
+            'modalities' => 'modalidades',
+            'modality_resolutions' => 'resoluciones de modalidad',
         ];
 
         $standardActions = ['view', 'search', 'create', 'edit', 'delete', 'export_pdf', 'export_excel'];
         $moduleActions = [
             'study_plans' => ['view', 'search', 'create', 'edit', 'export_pdf', 'export_excel'],
             'equivalencies' => ['view', 'search', 'create', 'resolve_contradiction', 'export_pdf', 'export_excel'],
+            'modality_resolutions' => ['view', 'search', 'create', 'export_pdf', 'export_excel'],
         ];
 
         $actionDescriptions = [

@@ -22,10 +22,14 @@ class PermissionRoleSeeder extends Seeder
         // roles, the fine-grained CoursePolicy/StudyPlanPolicy checks these by
         // name instead of the coarse one. The same three roles already hold
         // the coarse `equiparaciones.gestionar` too, so they also get the
-        // granular RC-02 permissions (equivalencies.*).
+        // granular RC-02 permissions (equivalencies.*). They also already
+        // hold the coarse `resoluciones.gestionar`, so they get the granular
+        // RC-03 permissions too (modalities.*, modality_resolutions.*).
         $coursePermissions = ['courses.view', 'courses.search', 'courses.create', 'courses.edit', 'courses.delete', 'courses.export_pdf', 'courses.export_excel'];
         $studyPlanPermissions = ['study_plans.view', 'study_plans.search', 'study_plans.create', 'study_plans.edit', 'study_plans.export_pdf', 'study_plans.export_excel'];
         $equivalencyPermissions = ['equivalencies.view', 'equivalencies.search', 'equivalencies.create', 'equivalencies.resolve_contradiction', 'equivalencies.export_pdf', 'equivalencies.export_excel'];
+        $modalityPermissions = ['modalities.view', 'modalities.search', 'modalities.create', 'modalities.edit', 'modalities.delete', 'modalities.export_pdf', 'modalities.export_excel'];
+        $modalityResolutionPermissions = ['modality_resolutions.view', 'modality_resolutions.search', 'modality_resolutions.create', 'modality_resolutions.export_pdf', 'modality_resolutions.export_excel'];
 
         $matrix = [
             'Administrador' => [
@@ -34,12 +38,14 @@ class PermissionRoleSeeder extends Seeder
                 'archivos.descargar', 'resoluciones.gestionar', 'reservas.gestionar', 'oferta.consolidar',
                 'planes.gestionar', 'equiparaciones.gestionar', 'solicitudes.crear', 'solicitudes.revisar',
                 ...$coursePermissions, ...$studyPlanPermissions, ...$equivalencyPermissions,
+                ...$modalityPermissions, ...$modalityResolutionPermissions,
             ],
             'Coordinadora de Docencia' => [
                 'atestados.gestionar', 'oferta.gestionar', 'atinencia.verificar', 'oferta.consultar',
                 'archivos.subir', 'archivos.descargar', 'resoluciones.gestionar', 'reservas.gestionar',
                 'oferta.consolidar', 'planes.gestionar', 'equiparaciones.gestionar', 'solicitudes.revisar',
                 ...$coursePermissions, ...$studyPlanPermissions, ...$equivalencyPermissions,
+                ...$modalityPermissions, ...$modalityResolutionPermissions,
             ],
             'Docente' => ['oferta.consultar', 'archivos.descargar'],
             'Consulta' => ['oferta.consultar'],
@@ -47,6 +53,7 @@ class PermissionRoleSeeder extends Seeder
                 'oferta.gestionar', 'oferta.consultar', 'archivos.subir', 'archivos.descargar',
                 'resoluciones.gestionar', 'planes.gestionar', 'equiparaciones.gestionar',
                 ...$coursePermissions, ...$studyPlanPermissions, ...$equivalencyPermissions,
+                ...$modalityPermissions, ...$modalityResolutionPermissions,
             ],
             'Coordinador CONTA' => ['oferta.consultar', 'archivos.descargar', 'oferta.consolidar'],
             'Recursos Humanos' => ['oferta.consultar', 'archivos.descargar'],
