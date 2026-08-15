@@ -17,7 +17,6 @@ final readonly class CourseDTO
         public string $code,
         public string $name,
         public ?int $programId,
-        public ?int $modalityId = null,
         public bool $isService = false,
         public bool $isBottleneck = false,
         public bool $requiresLaboratory = false,
@@ -25,7 +24,7 @@ final readonly class CourseDTO
     ) {}
 
     /**
-     * @param  array{code: string, name: string, program_id: ?int, modality_id?: ?int, is_service?: bool, is_bottleneck?: bool, requires_laboratory?: bool, laboratory_type?: ?string}  $data
+     * @param  array{code: string, name: string, program_id: ?int, is_service?: bool, is_bottleneck?: bool, requires_laboratory?: bool, laboratory_type?: ?string}  $data
      */
     public static function fromArray(array $data): self
     {
@@ -33,7 +32,6 @@ final readonly class CourseDTO
             code: $data['code'],
             name: $data['name'],
             programId: $data['program_id'],
-            modalityId: $data['modality_id'] ?? null,
             isService: $data['is_service'] ?? false,
             isBottleneck: $data['is_bottleneck'] ?? false,
             requiresLaboratory: $data['requires_laboratory'] ?? false,

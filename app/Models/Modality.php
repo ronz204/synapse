@@ -27,6 +27,16 @@ class Modality extends Model
     use HasFactory;
 
     /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'requires_resolution' => 'boolean',
+        ];
+    }
+
+    /**
      * @return HasMany<Course, $this>
      */
     public function courses(): HasMany

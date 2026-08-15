@@ -23,6 +23,14 @@ use Src\Curriculum\Equivalency\Domain\Entities\Equivalency;
 use Src\Curriculum\Equivalency\Domain\Events\EquivalencyBecameActive;
 use Src\Curriculum\Equivalency\Infrastructure\Persistence\Repositories\EloquentEquivalencyRepository;
 use Src\Curriculum\Equivalency\Presentation\Policies\EquivalencyPolicy;
+use Src\Curriculum\Modality\Domain\Contracts\ModalityRepositoryInterface;
+use Src\Curriculum\Modality\Domain\Contracts\ModalityResolutionRepositoryInterface;
+use Src\Curriculum\Modality\Domain\Entities\Modality;
+use Src\Curriculum\Modality\Domain\Entities\ModalityResolution;
+use Src\Curriculum\Modality\Infrastructure\Persistence\Repositories\EloquentModalityRepository;
+use Src\Curriculum\Modality\Infrastructure\Persistence\Repositories\EloquentModalityResolutionRepository;
+use Src\Curriculum\Modality\Presentation\Policies\ModalityPolicy;
+use Src\Curriculum\Modality\Presentation\Policies\ModalityResolutionPolicy;
 use Src\Curriculum\StudyPlan\Domain\Contracts\StudyPlanRepositoryInterface;
 use Src\Curriculum\StudyPlan\Domain\Entities\StudyPlan;
 use Src\Curriculum\StudyPlan\Infrastructure\Persistence\Repositories\EloquentStudyPlanRepository;
@@ -61,6 +69,8 @@ final class DomainServiceProvider extends ServiceProvider
         StudyPlanRepositoryInterface::class => EloquentStudyPlanRepository::class,
         EquivalencyRepositoryInterface::class => EloquentEquivalencyRepository::class,
         AccreditationRepositoryInterface::class => EloquentAccreditationRepository::class,
+        ModalityRepositoryInterface::class => EloquentModalityRepository::class,
+        ModalityResolutionRepositoryInterface::class => EloquentModalityResolutionRepository::class,
 
         // Shared, entity-agnostic capabilities rather than per-context ports:
         // turning rows into a file, or attaching a document to whatever owns
@@ -80,6 +90,8 @@ final class DomainServiceProvider extends ServiceProvider
         Course::class => CoursePolicy::class,
         StudyPlan::class => StudyPlanPolicy::class,
         Equivalency::class => EquivalencyPolicy::class,
+        Modality::class => ModalityPolicy::class,
+        ModalityResolution::class => ModalityResolutionPolicy::class,
     ];
 
     /**
