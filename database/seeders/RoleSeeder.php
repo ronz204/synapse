@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use App\Models\Permission;
 use App\Models\Role;
+use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -40,18 +40,16 @@ class RoleSeeder extends Seeder
      * every entry there maps to a real position at the university, while this
      * one exists so somebody can always administer the system.
      *
-     * DomainServiceProvider grants it an unconditional Gate::before pass, so it
-     * clears checks for permissions created after this seeder last ran. The
-     * explicit sync below keeps the pivot honest for anything that reads the
-     * relation directly instead of going through the Gate.
+     * Granting it the permissions themselves belongs to PermissionRoleSeeder,
+     * which owns the role -> permission wiring and runs after PermissionSeeder.
+     * Doing it here would silently sync an empty set, since this seeder runs
+     * before any permission row exists.
      */
     private function seedSuperadmin(): void
     {
-        $superadmin = Role::query()->firstOrCreate(
-            ['name' => 'Superadmin'],
+        Role::query()->firstOrCreate(
+            ['name' => User::SUPERADMIN_ROLE],
             ['description' => 'Rol técnico con acceso incondicional a todo el sistema'],
         );
-
-        $superadmin->permissions()->sync(Permission::query()->pluck('id'));
     }
 }
