@@ -142,10 +142,13 @@ final class DomainServiceProvider extends ServiceProvider
      * Superadmin passes every authorization check unconditionally. The seeders
      * already grant it every existing permission; this also covers permissions
      * added after the last seed run, with no re-sync needed.
+     *
+     * The same isSuperadmin() predicate backs HasRolesAndPermissions::hasPermissionTo(),
+     * so a direct permission check and a Gate check agree by construction.
      */
     private function registerSuperAdminBypass(): void
     {
-        Gate::before(fn (Authenticatable $user): ?bool => method_exists($user, 'hasRole') && $user->hasRole('Superadmin')
+        Gate::before(fn (Authenticatable $user): ?bool => method_exists($user, 'isSuperadmin') && $user->isSuperadmin()
             ? true
             : null);
     }

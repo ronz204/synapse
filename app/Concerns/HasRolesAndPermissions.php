@@ -25,9 +25,27 @@ use Illuminate\Database\Eloquent\Model;
  */
 trait HasRolesAndPermissions
 {
+    /**
+     * Technical role with unconditional access to the whole system, seeded by
+     * RoleSeeder and kept in sync with every permission by PermissionRoleSeeder.
+     */
+    public const SUPERADMIN_ROLE = 'Superadmin';
+
     public function hasRole(string $role): bool
     {
         return $this->roles->contains('name', $role);
+    }
+
+    /**
+     * Single source of truth for the unconditional-access role. Both this
+     * trait's permission checks and DomainServiceProvider's Gate::before read
+     * it, so the two authorization paths cannot drift apart — a Blade calling
+     * hasPermissionTo() directly resolves the same way as one going through
+     * the Gate via can().
+     */
+    public function isSuperadmin(): bool
+    {
+        return $this->hasRole(self::SUPERADMIN_ROLE);
     }
 
     /**
@@ -76,6 +94,10 @@ trait HasRolesAndPermissions
 
     public function hasPermissionTo(string $permission): bool
     {
+        if ($this->isSuperadmin()) {
+            return true;
+        }
+
         if ($this->hasDirectPermission($permission)) {
             return true;
         }
