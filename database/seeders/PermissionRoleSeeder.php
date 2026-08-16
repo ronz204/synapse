@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Permission;
 use App\Models\Role;
+use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -70,5 +71,26 @@ class PermissionRoleSeeder extends Seeder
 
             $role->permissions()->syncWithoutDetaching($permissionIds);
         }
+
+        $this->syncSuperadmin();
+    }
+
+    /**
+     * Superadmin is absent from the matrix above because it takes every
+     * permission rather than a hand-picked set. This lives here, not in
+     * RoleSeeder, so it runs after PermissionSeeder has created the rows —
+     * syncing from RoleSeeder would silently grant nothing.
+     *
+     * DomainServiceProvider's Gate::before still covers permissions created
+     * after the last seed run; this keeps the pivot honest for anything that
+     * reads the relation directly, such as the roles screen's permission count.
+     */
+    private function syncSuperadmin(): void
+    {
+        $superadmin = Role::query()
+            ->where('name', User::SUPERADMIN_ROLE)
+            ->firstOrFail();
+
+        $superadmin->permissions()->sync(Permission::query()->pluck('id'));
     }
 }
