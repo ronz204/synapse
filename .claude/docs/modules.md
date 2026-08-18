@@ -219,3 +219,59 @@ The rule "modality X requires a valid resolution before assignment" is a small, 
 - **`Course`** is the join point for all four modules: RC-01 defines it, RC-02 links pairs of it across plans, RC-02b accredits it, RC-03 attaches a modality to it.
 - **"An official document that authorizes a decision"** is a recurring shape both RC-02 (equivalency) and RC-03 (modality) need, but neither implements it as a shared, dedicated entity — confirmed for both. Each stores its own resolution number as a plain attribute on the record it belongs to (RC-03's additionally carries an approving body and a validity window that RC-02's does not), separately backed by the project's general-purpose document-attachment mechanism for the file itself. RC-02's use of that mechanism is wired; RC-03's is not yet.
 - **Versioning/non-destruction** is a cross-cutting requirement, not just an RC-02 rule: superseded equivalencies, historical accreditation, and expired modality resolutions must all remain queryable, never hard-deleted.
+
+---
+
+## Performance conventions (feature 002-perceived-performance)
+
+Cross-cutting rules that now apply to every listing and every write action. They are enforced by
+`tests/Feature/Performance/` and `tests/Feature/Architecture/`, not by convention alone.
+
+### Table mode is a threshold, not a preference
+
+A listing uses `tableMode = 'server'` when its catalog can exceed **200 rows** at the target volume,
+and `'client'` below that. Client mode is not a shortcut: it pays one payload up front and then
+sorts, filters and pages for free in the browser. Below ~200 rows that trade wins, and migrating
+those listings to server mode would make them measurably worse.
+
+| Mode | Modules | Size at target volume |
+|---|---|---|
+| server | Courses, Equivalencies, Modality assignments | ~800 / ~500 / ~800 |
+| client | Study plans, Modalities, Roles, Permissions | ~10 / ~10 / ~10 / ~50 |
+
+Structural budget `S-04` fails the suite if a large catalog is moved back to client mode.
+
+### The equivalency graph is never cached across requests
+
+`EloquentEquivalencyRepository::activeGraph()` feeds cycle detection. A cached graph that does not
+reflect the latest write lets a cycle through, silently — the failure Principle II declares
+non-negotiable. Within-request memoisation is fine; a `Cache::` call anywhere under
+`src/Curriculum/Equivalency` fails `DomainIsolationTest`.
+
+For the same reason there is deliberately **no query ceiling** on the equivalency write path (budget
+`S-05` is absent by design). Capping queries there would create pressure to cache the graph. The
+write path answers to its one-second time budget instead.
+
+### Projections are built per page, never per row
+
+Presentation-layer projections that enrich rows with cross-aggregate data (course codes on an
+equivalency, the backing resolution on a modality assignment) resolve the whole page in one query
+each. The per-row version of this cost 657 queries and 4.150 ms to open the Equivalencies module.
+
+### Pickers are capped and searchable
+
+Any `<select>` over a catalog that can grow — courses, above all — is limited to 50 options and
+narrowed by a search input. The prerequisite pickers additionally offer **only the plan's own
+courses**, because the domain rejects a prerequisite pointing outside the plan.
+
+### PDF exports leave the request; Excel exports do not
+
+`SpatiePdfExporter` boots headless Chromium, which costs seconds regardless of row count. PDF export
+is queued through `GenerateTableExportJob`, acknowledged immediately, and offered for download when
+ready. Excel has no such cost and stays synchronous — making the two "consistent" would be a
+regression.
+
+### Every write button disables itself while running
+
+`wire:loading.attr="disabled"` scoped with `wire:target` to its own action. Livewire already discards
+overlapping requests, so this is about what the user can see, not about data integrity.
