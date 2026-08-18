@@ -13,6 +13,10 @@
 'title' => '',
 'tableCols' => '1fr',
 'createAction' => "\$wire.openCreateModal()",
+// Queued-export state, supplied by InteractsWithExports on the consuming
+// component. Defaulted so a table that does not export still renders.
+'pendingExportId' => null,
+'readyExportId' => null,
 ])
 
 {{--
@@ -68,6 +72,28 @@
         })"
     @endif>
 
+    {{--
+        Queued-export state (FR-012, rule R-08). The PDF path boots Chromium and
+        cannot answer inside its budget, so the request is acknowledged at once
+        and the file is offered when it lands.
+
+        Short polling, not websockets: BROADCAST_CONNECTION is `log` and there is
+        no realtime channel in this application. Standing one up for an
+        occasional export would be infrastructure with no requirement behind it.
+    --}}
+    @if ($pendingExportId ?? null)
+        <div class="export-status" role="status" aria-live="polite" wire:poll.2s="pollExport">
+            <span class="export-spinner" aria-hidden="true"></span>
+            <span>{{ __('Preparing your export...') }}</span>
+        </div>
+    @elseif ($readyExportId ?? null)
+        <div class="export-status export-status-ready" role="status" aria-live="polite">
+            <span>{{ __('Your export is ready.') }}</span>
+            <button type="button" class="btn btn-primary" wire:click="downloadExport"
+                wire:loading.attr="disabled" wire:target="downloadExport">{{ __('Download') }}</button>
+        </div>
+    @endif
+
     <div class="card-head">
         <span class="card-title">{{ $title }}</span>
         <div class="card-actions">
@@ -103,7 +129,10 @@
                     --}}
                     <div class="download-menu" :class="{ 'open': open }">
                         @if ($canExportPdf)
-                            <button type="button" class="download-item" wire:click="{{ $isClient ? 'exportPdf(search)' : 'exportPdf' }}" x-on:click="open = false">
+                            {{-- Disabled while the request is in flight so a second
+                                 press cannot queue a second job (FR-004, rule R-04). --}}
+                            <button type="button" class="download-item" wire:click="{{ $isClient ? 'exportPdf(search)' : 'exportPdf' }}" x-on:click="open = false"
+                                wire:loading.attr="disabled" wire:target="exportPdf">
                                 <svg class="download-icon-pdf" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                                     <polyline points="14 2 14 8 20 8" />
@@ -154,25 +183,46 @@
             <span>{{ __('Records') }}</span>
         </div>
 
+        {{--
+            Two different debounces on purpose, not an oversight.
+
+            Server mode settles at 250 ms. FR-008 forbids a query per keystroke,
+            so some settling delay is mandatory; 250 ms coalesces normal typing
+            while keeping the total wait short. It was 400 ms, which met FR-008
+            but spent 150 ms of the user's time for nothing.
+
+            Client mode stays at 150 ms. It filters an array already in the
+            browser and issues no query at all, so there is nothing to coalesce
+            — raising it to match the server would only make the fast path feel
+            slower. FR-008 is about queries, and client mode makes none.
+
+            Budget B-04 is measured from when the input settles, not from each
+            keystroke; see contracts/performance-budgets.md, measurement rule 2.
+        --}}
         <div class="control-group">
             <span>{{ __('Search') }}:</span>
             @if ($isClient)
                 <input type="search" x-model.debounce.150ms="search" aria-label="{{ __('Search') }}">
             @else
-                <input type="search" wire:model.live.debounce.400ms="search" aria-label="{{ __('Search') }}">
+                <input type="search" wire:model.live.debounce.250ms="search" aria-label="{{ __('Search') }}">
             @endif
         </div>
     </div>
 
-    <div class="table-scroll"
-        wire:loading.class="opacity-50"
-        @if ($isClient)
-            wire:target="delete,save,exportPdf,exportExcel"
-        @else
-            wire:target="search,perPage,sort,previousPage,nextPage,gotoPage,delete,save,exportPdf,exportExcel"
-        @endif>
+    @php
+        // Scoped to the actions that actually replace the table's contents.
+        // An unscoped wire:loading would blank the rows while an unrelated
+        // modal saved, which reads as the page breaking rather than loading.
+        $tableTargets = $isClient
+            ? 'delete,save,exportPdf,exportExcel'
+            : 'search,perPage,sort,previousPage,nextPage,gotoPage,delete,save,exportPdf,exportExcel';
+    @endphp
 
+    <div class="table-scroll">
         <div class="table-inner" style="--table-cols: {{ $tableCols }};" role="table">
+            {{-- The header stays put through a reload: it is part of the shape
+                 the skeleton promises, and reprinting it would make the whole
+                 card flicker (FR-002). --}}
             <div class="data-row data-row-head" role="row">
                 @foreach ($headers as $header)
                     @php $sortable = $header['sortable'] ?? false; @endphp
@@ -194,7 +244,16 @@
                 <span>{{ __('Actions') }}</span>
             </div>
 
-            {{ $slot }}
+            {{-- wire:loading.delay so a fast response never flashes a skeleton;
+                 a placeholder that appears and vanishes in 80 ms feels worse
+                 than none at all. --}}
+            <div wire:loading.delay wire:target="{{ $tableTargets }}">
+                <x-ui.skeleton :rows="min(6, (int) $perPage)" :table-cols="$tableCols" />
+            </div>
+
+            <div wire:loading.delay.remove wire:target="{{ $tableTargets }}">
+                {{ $slot }}
+            </div>
         </div>
     </div>
 

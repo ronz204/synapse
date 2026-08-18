@@ -434,6 +434,19 @@ select:focus[data-flux-control] {
         opacity: 0.7;
     }
 
+    /* Press acknowledgement, applied synchronously on pointerdown by
+       resources/js/nav-feedback.js. wire:current only lands after the page has
+       been fetched and swapped; this is what makes the click feel registered
+       inside 100 ms (FR-001). Transition stays off so it appears immediately —
+       an easing curve here would spend the very budget it is meant to meet. */
+    .nav-item.nav-pending,
+    .nav-child.nav-pending {
+        background: var(--color-background-brand-subtle);
+        color: var(--color-text-brand);
+        border-left-color: var(--color-background-brand-default);
+        transition: none;
+    }
+
     .nav-item svg {
         flex-shrink: 0;
     }
@@ -1496,6 +1509,124 @@ select:focus[data-flux-control] {
         text-align: center;
         color: var(--color-text-tertiary);
         font-size: 13.5px;
+    }
+
+    /* ---------- failed request banner (FR-009) ----------
+       Fixed to the bottom so it is visible whatever the page was doing, and
+       carries a retry: an error the user can only stare at is barely better
+       than the indefinite spinner it replaced. */
+
+    .request-failure {
+        position: fixed;
+        left: 50%;
+        bottom: 24px;
+        transform: translateX(-50%);
+        z-index: 60;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        max-width: min(560px, calc(100vw - 32px));
+        padding: 12px 16px;
+        border-radius: 12px;
+        font-size: 13.5px;
+        color: var(--color-text-primary);
+        background: var(--color-background-default, #fff);
+        border: 1px solid var(--color-border-default);
+        box-shadow: 0 8px 28px rgb(0 0 0 / 18%);
+    }
+
+    /* ---------- queued export status (FR-012) ---------- */
+
+    .export-status {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 20px;
+        font-size: 13px;
+        color: var(--color-text-secondary);
+        background: var(--color-background-subtle);
+        border-bottom: 1px solid var(--color-border-default);
+    }
+
+    .export-status-ready {
+        color: var(--color-text-primary);
+        justify-content: space-between;
+    }
+
+    .export-spinner {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        border: 2px solid var(--color-border-default);
+        border-top-color: var(--color-background-brand-default);
+        animation: export-spin 0.8s linear infinite;
+    }
+
+    @keyframes export-spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    /* A disabled action must look disabled, not just refuse the click — FR-004
+       is about the user seeing that the press was taken, not only about the
+       database staying correct. */
+    .btn[disabled],
+    .download-item[disabled] {
+        opacity: 0.55;
+        cursor: not-allowed;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .export-spinner {
+            animation-duration: 3s;
+        }
+    }
+
+    /* ---------- loading skeleton (feature 002-perceived-performance) ----------
+       Mirrors .data-row's grid and padding exactly so the real rows land where
+       the placeholder already was — a skeleton that shifts the layout when it
+       resolves is worse than none. */
+
+    .skeleton-row {
+        display: grid;
+        grid-template-columns: var(--table-cols, 1fr);
+        padding: 13px 20px;
+        align-items: center;
+        border-top: 1px solid var(--color-border-default);
+    }
+
+    .skeleton-bar {
+        display: block;
+        height: 11px;
+        width: 70%;
+        border-radius: 6px;
+        background: var(--color-background-subtle);
+        animation: skeleton-pulse 1.4s ease-in-out infinite;
+    }
+
+    .skeleton-row:nth-child(even) .skeleton-bar {
+        width: 55%;
+    }
+
+    @keyframes skeleton-pulse {
+
+        0%,
+        100% {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: 0.45;
+        }
+    }
+
+    /* Respect the user's motion preference: a pulsing placeholder is decoration,
+       and decoration is exactly what this setting asks us to drop. */
+    @media (prefers-reduced-motion: reduce) {
+        .skeleton-bar {
+            animation: none;
+        }
     }
 
     /* ---------- cells ---------- */
