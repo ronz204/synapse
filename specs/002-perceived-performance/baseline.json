@@ -1,0 +1,322 @@
+{
+    "takenAt": "2026-08-18T15:29:05+00:00",
+    "layer": "deterministic",
+    "repetitions": 20,
+    "concurrency": 1,
+    "volume": {
+        "programs": 14,
+        "studyPlans": 10,
+        "courses": 800,
+        "prerequisites": 1400,
+        "equivalencies": 503,
+        "modalityResolutions": 301,
+        "students": 2000,
+        "academicRecords": 24000
+    },
+    "verdict": "fail",
+    "rows": [
+        {
+            "module": "equivalencies",
+            "interaction": "open",
+            "class": "ModuleOpen",
+            "budget": "B-02",
+            "percentile": 95,
+            "observedMs": 4150,
+            "maxMs": 500,
+            "verdict": "fail",
+            "excessPercent": 730,
+            "firstPaintMs": null,
+            "queryCount": 46647,
+            "serializedRows": null
+        },
+        {
+            "module": "courses",
+            "interaction": "open",
+            "class": "ModuleOpen",
+            "budget": "B-02",
+            "percentile": 95,
+            "observedMs": 237,
+            "maxMs": 500,
+            "verdict": "pass",
+            "excessPercent": 0,
+            "firstPaintMs": null,
+            "queryCount": 306,
+            "serializedRows": null
+        },
+        {
+            "module": "dashboard",
+            "interaction": "open",
+            "class": "ModuleOpen",
+            "budget": "B-02",
+            "percentile": 95,
+            "observedMs": 41,
+            "maxMs": 500,
+            "verdict": "pass",
+            "excessPercent": 0,
+            "firstPaintMs": null,
+            "queryCount": 24,
+            "serializedRows": null
+        },
+        {
+            "module": "modalities",
+            "interaction": "open",
+            "class": "ModuleOpen",
+            "budget": "B-02",
+            "percentile": 95,
+            "observedMs": 41,
+            "maxMs": 500,
+            "verdict": "pass",
+            "excessPercent": 0,
+            "firstPaintMs": null,
+            "queryCount": 273,
+            "serializedRows": null
+        },
+        {
+            "module": "modality-assignments",
+            "interaction": "open",
+            "class": "ModuleOpen",
+            "budget": "B-02",
+            "percentile": 95,
+            "observedMs": 206,
+            "maxMs": 500,
+            "verdict": "pass",
+            "excessPercent": 0,
+            "firstPaintMs": null,
+            "queryCount": 666,
+            "serializedRows": null
+        },
+        {
+            "module": "permissions",
+            "interaction": "open",
+            "class": "ModuleOpen",
+            "budget": "B-02",
+            "percentile": 95,
+            "observedMs": 53,
+            "maxMs": 500,
+            "verdict": "pass",
+            "excessPercent": 0,
+            "firstPaintMs": null,
+            "queryCount": 453,
+            "serializedRows": null
+        },
+        {
+            "module": "roles",
+            "interaction": "open",
+            "class": "ModuleOpen",
+            "budget": "B-02",
+            "percentile": 95,
+            "observedMs": 115,
+            "maxMs": 500,
+            "verdict": "pass",
+            "excessPercent": 0,
+            "firstPaintMs": null,
+            "queryCount": 655,
+            "serializedRows": null
+        },
+        {
+            "module": "settings",
+            "interaction": "open",
+            "class": "ModuleOpen",
+            "budget": "B-02",
+            "percentile": 95,
+            "observedMs": 46,
+            "maxMs": 500,
+            "verdict": "pass",
+            "excessPercent": 0,
+            "firstPaintMs": null,
+            "queryCount": 342,
+            "serializedRows": null
+        },
+        {
+            "module": "study-plans",
+            "interaction": "open",
+            "class": "ModuleOpen",
+            "budget": "B-02",
+            "percentile": 95,
+            "observedMs": 46,
+            "maxMs": 500,
+            "verdict": "pass",
+            "excessPercent": 0,
+            "firstPaintMs": null,
+            "queryCount": 128,
+            "serializedRows": null
+        }
+    ],
+    "notMeasured": [
+        {
+            "module": "study-plans",
+            "interaction": "sort:first-column",
+            "reason": "not observable in the deterministic layer \u2014 run --layer=browser"
+        },
+        {
+            "module": "study-plans",
+            "interaction": "paginate:next",
+            "reason": "not observable in the deterministic layer \u2014 run --layer=browser"
+        },
+        {
+            "module": "study-plans",
+            "interaction": "search:hit",
+            "reason": "not observable in the deterministic layer \u2014 run --layer=browser"
+        },
+        {
+            "module": "study-plans",
+            "interaction": "search:miss",
+            "reason": "not observable in the deterministic layer \u2014 run --layer=browser"
+        },
+        {
+            "module": "courses",
+            "interaction": "sort:first-column",
+            "reason": "not observable in the deterministic layer \u2014 run --layer=browser"
+        },
+        {
+            "module": "courses",
+            "interaction": "paginate:next",
+            "reason": "not observable in the deterministic layer \u2014 run --layer=browser"
+        },
+        {
+            "module": "courses",
+            "interaction": "search:hit",
+            "reason": "not observable in the deterministic layer \u2014 run --layer=browser"
+        },
+        {
+            "module": "courses",
+            "interaction": "search:miss",
+            "reason": "not observable in the deterministic layer \u2014 run --layer=browser"
+        },
+        {
+            "module": "equivalencies",
+            "interaction": "sort:first-column",
+            "reason": "not observable in the deterministic layer \u2014 run --layer=browser"
+        },
+        {
+            "module": "equivalencies",
+            "interaction": "paginate:next",
+            "reason": "not observable in the deterministic layer \u2014 run --layer=browser"
+        },
+        {
+            "module": "equivalencies",
+            "interaction": "search:hit",
+            "reason": "not observable in the deterministic layer \u2014 run --layer=browser"
+        },
+        {
+            "module": "equivalencies",
+            "interaction": "search:miss",
+            "reason": "not observable in the deterministic layer \u2014 run --layer=browser"
+        },
+        {
+            "module": "modalities",
+            "interaction": "sort:first-column",
+            "reason": "not observable in the deterministic layer \u2014 run --layer=browser"
+        },
+        {
+            "module": "modalities",
+            "interaction": "paginate:next",
+            "reason": "not observable in the deterministic layer \u2014 run --layer=browser"
+        },
+        {
+            "module": "modalities",
+            "interaction": "search:hit",
+            "reason": "not observable in the deterministic layer \u2014 run --layer=browser"
+        },
+        {
+            "module": "modalities",
+            "interaction": "search:miss",
+            "reason": "not observable in the deterministic layer \u2014 run --layer=browser"
+        },
+        {
+            "module": "modality-assignments",
+            "interaction": "sort:first-column",
+            "reason": "not observable in the deterministic layer \u2014 run --layer=browser"
+        },
+        {
+            "module": "modality-assignments",
+            "interaction": "paginate:next",
+            "reason": "not observable in the deterministic layer \u2014 run --layer=browser"
+        },
+        {
+            "module": "modality-assignments",
+            "interaction": "search:hit",
+            "reason": "not observable in the deterministic layer \u2014 run --layer=browser"
+        },
+        {
+            "module": "modality-assignments",
+            "interaction": "search:miss",
+            "reason": "not observable in the deterministic layer \u2014 run --layer=browser"
+        },
+        {
+            "module": "roles",
+            "interaction": "sort:first-column",
+            "reason": "not observable in the deterministic layer \u2014 run --layer=browser"
+        },
+        {
+            "module": "roles",
+            "interaction": "paginate:next",
+            "reason": "not observable in the deterministic layer \u2014 run --layer=browser"
+        },
+        {
+            "module": "roles",
+            "interaction": "search:hit",
+            "reason": "not observable in the deterministic layer \u2014 run --layer=browser"
+        },
+        {
+            "module": "roles",
+            "interaction": "search:miss",
+            "reason": "not observable in the deterministic layer \u2014 run --layer=browser"
+        },
+        {
+            "module": "permissions",
+            "interaction": "sort:first-column",
+            "reason": "not observable in the deterministic layer \u2014 run --layer=browser"
+        },
+        {
+            "module": "permissions",
+            "interaction": "paginate:next",
+            "reason": "not observable in the deterministic layer \u2014 run --layer=browser"
+        },
+        {
+            "module": "permissions",
+            "interaction": "search:hit",
+            "reason": "not observable in the deterministic layer \u2014 run --layer=browser"
+        },
+        {
+            "module": "permissions",
+            "interaction": "search:miss",
+            "reason": "not observable in the deterministic layer \u2014 run --layer=browser"
+        },
+        {
+            "module": "study-plans",
+            "interaction": "save:create",
+            "reason": "not observable in the deterministic layer \u2014 run --layer=browser"
+        },
+        {
+            "module": "study-plans",
+            "interaction": "save:structure",
+            "reason": "not observable in the deterministic layer \u2014 run --layer=browser"
+        },
+        {
+            "module": "equivalencies",
+            "interaction": "save:create",
+            "reason": "not observable in the deterministic layer \u2014 run --layer=browser"
+        },
+        {
+            "module": "equivalencies",
+            "interaction": "save:reject:cycle",
+            "reason": "not observable in the deterministic layer \u2014 run --layer=browser"
+        },
+        {
+            "module": "equivalencies",
+            "interaction": "save:reject:contradiction",
+            "reason": "not observable in the deterministic layer \u2014 run --layer=browser"
+        },
+        {
+            "module": "modality-assignments",
+            "interaction": "save:reject:no-modality-resolution",
+            "reason": "not observable in the deterministic layer \u2014 run --layer=browser"
+        },
+        {
+            "module": "courses",
+            "interaction": "export:pdf",
+            "reason": "not observable in the deterministic layer \u2014 run --layer=browser"
+        }
+    ]
+}
