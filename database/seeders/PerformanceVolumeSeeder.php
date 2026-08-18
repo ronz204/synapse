@@ -11,7 +11,6 @@ use App\Enums\PlanClassification;
 use App\Models\AcademicPeriod;
 use App\Models\Modality;
 use App\Models\Program;
-use Illuminate\Console\OutputStyle;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -83,14 +82,13 @@ class PerformanceVolumeSeeder extends Seeder
 
     public function run(): void
     {
+        // A second run is a deliberate no-op, not an error: the marker is
+        // already there. `db:seed` still reports the seeder as DONE, just in
+        // milliseconds instead of seconds, which is the signal that nothing
+        // happened. To rebuild from scratch, `php artisan migrate:fresh` first.
         if ($this->alreadySeeded()) {
-            $this->report('PerformanceVolumeSeeder: target volume already present, nothing to do.');
-            $this->report('  Run `php artisan migrate:fresh` first to rebuild it from scratch.');
-
             return;
         }
-
-        $startedAt = microtime(true);
 
         $programIds = $this->resolvePrograms();
         $modalityIds = $this->resolveModalities();
@@ -107,23 +105,6 @@ class PerformanceVolumeSeeder extends Seeder
 
         $this->seedNegativeCases($courseIds, $planIds, $modalityIds);
 
-        $elapsed = round(microtime(true) - $startedAt, 1);
-        $this->report("PerformanceVolumeSeeder: target volume ready in {$elapsed}s.");
-    }
-
-    /**
-     * Console output when there is a console.
-     *
-     * Goes through the container's output rather than $this->command: seeders
-     * are also constructed directly from tests, where that property is never
-     * assigned, and reaching for it there would fail on an uninitialised typed
-     * property.
-     */
-    private function report(string $message): void
-    {
-        if (app()->bound(OutputStyle::class)) {
-            app(OutputStyle::class)->writeln("<info>{$message}</info>");
-        }
     }
 
     private function alreadySeeded(): bool

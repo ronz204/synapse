@@ -54,6 +54,14 @@
     </x-ui.data-table>
 
     <x-ui.modal :show="$showModal" :title="__('Assign modality to course')">
+        {{-- Narrows the picker below. Without it the modal renders the whole
+             active catalog — ~800 options — on every component render. --}}
+        <div class="form-field">
+            <label for="assignmentCourseSearch">{{ __('Search courses') }}</label>
+            <input id="assignmentCourseSearch" type="search" wire:model.live.debounce.250ms="courseSearch"
+                placeholder="{{ __('Type a code or name to narrow the list...') }}">
+        </div>
+
         <div class="form-field">
             <label for="assignmentCourse">{{ __('Course') }}</label>
             <select id="assignmentCourse" wire:model="form.courseId" class="{{ $errors->has('form.courseId') ? 'has-error' : '' }}">
