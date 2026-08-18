@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Livewire\Concerns;
 
+use App\Jobs\GenerateTableExportJob;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Src\Shared\Export\Contracts\ExcelExporterInterface;
 use Src\Shared\Export\Contracts\PdfExporterInterface;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -69,12 +73,128 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 trait InteractsWithExports
 {
     /**
+     * Set while a queued export is being built; drives the polling indicator.
+     */
+    public ?string $pendingExportId = null;
+
+    /**
+     * Set once the file is on disk and can be handed over.
+     */
+    public ?string $readyExportId = null;
+
+    /**
      * @param  array<int, array{key: string, label: string, format?: callable}>  $headers
      * @param  iterable<array<string, mixed>>  $rows
      */
     protected function streamExcel(array $headers, iterable $rows, string $filename, ExcelExporterInterface $exporter): StreamedResponse
     {
         return $exporter->streamDownload($this->mapRowsForExport($headers, $rows), $filename);
+    }
+
+    /**
+     * Hands a PDF export to the queue and returns immediately.
+     *
+     * Excel deliberately stays synchronous above. The cost that made this
+     * necessary is not the row count — it is Browsershot booting a full
+     * headless Chromium, which takes seconds regardless of how much is being
+     * exported and applies only to PDF. Queueing the Excel path too would add
+     * moving parts to something that is already fast.
+     *
+     * Rows are mapped to their export columns here rather than in the job: the
+     * header definitions carry `format` closures, and a closure cannot be
+     * serialised into a queue payload.
+     *
+     * @param  array<int, array{key: string, label: string, format?: callable}>  $headers
+     * @param  iterable<array<string, mixed>>  $rows
+     */
+    protected function queuePdf(string $title, array $headers, iterable $rows, string $filename, string $paperSize = 'a4'): void
+    {
+        $exportId = (string) Str::uuid();
+
+        Cache::put(
+            GenerateTableExportJob::cacheKey($exportId),
+            ['status' => GenerateTableExportJob::STATUS_PENDING],
+            now()->addMinutes(GenerateTableExportJob::STATUS_TTL_MINUTES),
+        );
+
+        GenerateTableExportJob::dispatch(
+            exportId: $exportId,
+            format: GenerateTableExportJob::FORMAT_PDF,
+            title: $title,
+            rows: iterator_to_array($this->mapRowsForExport($headers, $rows), false),
+            filename: $filename,
+            paperSize: $paperSize,
+        );
+
+        $this->pendingExportId = $exportId;
+        $this->readyExportId = null;
+
+        // FR-012: the acceptance is confirmed now, the file arrives later. The
+        // user is never left looking at a pressed button wondering whether the
+        // system heard them.
+        $this->dispatch('toast', variant: 'success', text: __('Export in progress — you will be able to download it in a moment.'));
+    }
+
+    /**
+     * Polled while an export is pending. Short polling rather than websockets
+     * on purpose: BROADCAST_CONNECTION is `log`, there is no realtime channel
+     * in this application, and standing one up for an occasional export would
+     * be infrastructure without a requirement behind it.
+     */
+    public function pollExport(): void
+    {
+        if ($this->pendingExportId === null) {
+            return;
+        }
+
+        $status = GenerateTableExportJob::status($this->pendingExportId);
+
+        if (($status['status'] ?? null) === GenerateTableExportJob::STATUS_PENDING) {
+            return;
+        }
+
+        // A missing status is a dead end, not a "keep waiting". queuePdf()
+        // writes the pending marker BEFORE dispatching, so the only ways to get
+        // here with nothing are an expired TTL or a lost job — in both cases the
+        // file is never coming, and polling forever is the indefinite spinner
+        // FR-009 exists to prevent.
+        if ($status === null) {
+            $this->pendingExportId = null;
+            $this->dispatch('toast', variant: 'danger', text: __('The export expired before it could be delivered. Please request it again.'));
+
+            return;
+        }
+
+        if (($status['status'] ?? null) === GenerateTableExportJob::STATUS_READY) {
+            $this->readyExportId = $this->pendingExportId;
+            $this->pendingExportId = null;
+            $this->dispatch('toast', variant: 'success', text: __('Your export is ready to download.'));
+
+            return;
+        }
+
+        // Failure is surfaced and the indicator is cleared. A spinner with no
+        // possible ending is what FR-009 exists to prevent.
+        $this->pendingExportId = null;
+        $this->dispatch('toast', variant: 'danger', text: __('The export could not be generated. Please try again.'));
+    }
+
+    public function downloadExport(): ?StreamedResponse
+    {
+        if ($this->readyExportId === null) {
+            return null;
+        }
+
+        $status = GenerateTableExportJob::status($this->readyExportId);
+        $this->readyExportId = null;
+
+        if ($status === null || ($status['status'] ?? null) !== GenerateTableExportJob::STATUS_READY) {
+            $this->dispatch('toast', variant: 'danger', text: __('That export is no longer available. Please request it again.'));
+
+            return null;
+        }
+
+        return Storage::disk('local')->download($status['path'], $status['filename']);
     }
 
     /**
