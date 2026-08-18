@@ -29,6 +29,47 @@ const CONTENT_SELECTOR = ".table-inner .data-row:not(.data-row-head)";
 const EMPTY_SELECTOR = ".card-footer";
 
 /**
+ * Counts completed Livewire round trips and wire:navigate swaps.
+ *
+ * This is what makes a measurement mean anything. Waiting only for "rows are
+ * present" is worthless, because the rows of the PREVIOUS page are still in the
+ * DOM the instant the click lands — the first version of this probe reported
+ * 21 ms module opens and null first paints for exactly that reason. The counter
+ * gives a definite "the round trip this click caused has finished" signal.
+ *
+ * Installed once per real page load; it survives wire:navigate because that
+ * keeps the JS context.
+ */
+async function installCounters(page) {
+  await page.evaluate(() => {
+    if (window.__perfCounters) return;
+
+    window.__perfCounters = { commits: 0, navigations: 0 };
+
+    document.addEventListener("livewire:navigated", () => {
+      window.__perfCounters.navigations++;
+    });
+
+    document.addEventListener("livewire:init", () => {
+      window.Livewire.hook("commit", ({ succeed }) => {
+        succeed(() => {
+          window.__perfCounters.commits++;
+        });
+      });
+    });
+
+    // livewire:init may already have fired by the time this runs.
+    if (window.Livewire) {
+      window.Livewire.hook("commit", ({ succeed }) => {
+        succeed(() => {
+          window.__perfCounters.commits++;
+        });
+      });
+    }
+  });
+}
+
+/**
  * Installs the in-page probe. Everything below runs inside the browser, so it
  * must stay dependency-free.
  */
@@ -70,37 +111,93 @@ async function readProbe(page) {
 }
 
 /**
- * One observation: arm the probe, dispatch the interaction, wait for content.
- * The clock starts inside the page on pointerdown, not here — measuring from
- * Node would fold the CDP round-trip into every number.
+ * One observation: arm the probe, dispatch the interaction, wait for the round
+ * trip it caused to actually finish, then read the clock.
+ *
+ * The clock starts inside the page, not here — measuring from Node would fold
+ * the CDP round trip into every number.
+ *
+ * `expect` says what finishing means: 'navigation' for a module open,
+ * 'commit' for an in-module interaction. Waiting on the counter rather than on
+ * the presence of rows is the whole point; rows from the previous page satisfy
+ * a presence check immediately and produce a meaningless number.
  */
-async function measure(page, interact) {
+async function measure(
+  page,
+  interact,
+  expect = "commit",
+  expectedPath = null,
+  needsRows = true,
+) {
+  await installCounters(page);
   await armProbe(page);
 
-  await page.evaluate(() => {
+  const before = await page.evaluate(() => ({ ...window.__perfCounters }));
+
+  // The clock is started and the interaction dispatched inside the SAME
+  // evaluate. Splitting them put a CDP round trip between "start" and "click",
+  // and that hop — around 150 ms — landed in every firstPaint reading for any
+  // control without a synchronous visual change. The sidebar looked instant and
+  // every button looked slow, which was the instrument, not the app.
+  const dispatched = await page.evaluate((action) => {
     window.__perf.start = performance.now();
     window.__perf.firstPaint = null;
-  });
 
-  await interact();
+    return new Function(`return (${action})`)()();
+  }, interact.toString());
+
+  if (dispatched === "not-applicable") {
+    return { notApplicable: true };
+  }
+
+  let timedOut = false;
 
   await page
     .waitForFunction(
-      (contentSel, emptySel) => {
+      (prev, kind, path, contentSel, emptySel, needsRows) => {
+        const counters = window.__perfCounters;
+
+        // 'commit' accepts a DOM mutation as well, because the small catalogs
+        // run in client mode: Alpine filters and sorts them in the browser and
+        // no Livewire round trip ever happens. Requiring a commit there would
+        // time out on a table that is, correctly, instant.
+        const finished =
+          kind === "navigation"
+            ? counters.navigations > prev.navigations &&
+              (path === null || window.location.pathname === path)
+            : counters.commits > prev.commits ||
+              window.__perf.firstPaint !== null;
+
+        if (!finished) return false;
+
+        // Not every module is a list. Dashboard and Settings have no table, so
+        // insisting on rows there just times out at 15 s and reports a number
+        // that describes the probe, not the page.
+        if (!needsRows) return true;
+
+        // Round trip done; now make sure something is actually painted.
         const rows = document.querySelectorAll(contentSel);
         if (rows.length > 0) return true;
+
         const footer = document.querySelector(emptySel);
         return footer !== null && footer.textContent.trim().length > 0;
       },
-      { timeout: config.timeoutMs ?? 15000, polling: "mutation" },
+      { timeout: config.timeoutMs ?? 15000, polling: "raf" },
+      before,
+      expect,
+      expectedPath,
       CONTENT_SELECTOR,
       EMPTY_SELECTOR,
+      needsRows,
     )
     .catch(() => {
-      /* Timeout is reported as a slow observation, not swallowed as a pass. */
+      // Reported as a timed-out observation, never swallowed as a pass.
+      timedOut = true;
     });
 
-  return readProbe(page);
+  const result = await readProbe(page);
+
+  return { ...result, timedOut };
 }
 
 async function signIn(page) {
@@ -120,39 +217,49 @@ async function signIn(page) {
  * full page load instead.
  */
 async function openModule(page, module) {
-  const selector = `a[href$="${module.path}"]`;
+  const path = module.path;
 
-  return measure(page, async () => {
-    await page.evaluate((sel) => {
-      const link = document.querySelector(sel);
+  return measure(
+    page,
+    // Serialised into the page, so the path has to be baked in rather than
+    // closed over.
+    new Function(`
+      const link = document.querySelector('a[href$="${path}"]');
+      if (!link) return "not-applicable";
       link.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
       link.click();
-    }, selector);
-  });
+    `),
+    "navigation",
+    module.path,
+    module.hasList,
+  );
 }
 
 async function sortFirstColumn(page) {
-  return measure(page, async () => {
-    await page.evaluate(() => {
-      const header = document.querySelector(
-        '.data-row-head [role="columnheader"][data-sortable="true"]',
-      );
-      if (!header) return;
-      header.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
-      header.click();
-    });
+  return measure(page, () => {
+    const header = document.querySelector(
+      '.data-row-head [role="columnheader"][data-sortable="true"]',
+    );
+    if (!header) return "not-applicable";
+    header.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    header.click();
   });
 }
 
 async function paginateNext(page) {
-  return measure(page, async () => {
-    await page.evaluate(() => {
-      const buttons = [...document.querySelectorAll(".pagination .page-btn")];
-      const next = buttons[buttons.length - 1];
-      if (!next || next.disabled) return;
-      next.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
-      next.click();
-    });
+  return measure(page, () => {
+    const buttons = [...document.querySelectorAll(".pagination .page-btn")];
+    const next = buttons[buttons.length - 1];
+
+    // A catalog that fits on one page has a disabled Next. Dispatching anyway
+    // waits for a round trip that will never happen and reports a 15-second
+    // timeout for a table that is simply small.
+    if (!next || next.disabled || next.classList.contains("disabled")) {
+      return "not-applicable";
+    }
+
+    next.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+    next.click();
   });
 }
 
@@ -163,17 +270,30 @@ async function paginateNext(page) {
  * contracts/performance-budgets.md, measurement rule 2.
  */
 async function search(page, term) {
-  await page.evaluate((value) => {
-    const input = document.querySelector('input[type="search"]');
-    if (!input) return;
-    input.focus();
-    input.value = value;
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-  }, term);
+  const debounceMs = config.debounceMs ?? 300;
 
-  await new Promise((resolve) => setTimeout(resolve, config.debounceMs ?? 300));
+  const result = await measure(
+    page,
+    new Function(`
+      const input = document.querySelector('input[type="search"]');
+      if (!input) return "not-applicable";
+      input.focus();
+      input.value = ${JSON.stringify(term)};
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+    `),
+  );
 
-  return measure(page, async () => {});
+  if (result.notApplicable) return result;
+
+  // The settling delay is mandatory (FR-008 forbids a query per keystroke), so
+  // charging it to the interaction would make B-04 unreachable by construction.
+  // Budget contract, measurement rule 2: the clock for search starts when the
+  // input settles, not when the key is pressed.
+  return {
+    ...result,
+    contentReadyMs: Math.max(0, result.contentReadyMs - debounceMs),
+    firstPaintMs: result.firstPaintMs,
+  };
 }
 
 const INTERACTIONS = {
@@ -203,6 +323,16 @@ async function run() {
       for (const module of config.modules) {
         try {
           const open = await openModule(page, module);
+
+          if (open.notApplicable) {
+            notMeasured.push({
+              module: module.key,
+              interaction: "open",
+              reason: "no sidebar link for this module",
+            });
+            continue;
+          }
+
           observations.push({
             module: module.key,
             interaction: "open",
@@ -223,6 +353,19 @@ async function run() {
         for (const [name, fn] of Object.entries(INTERACTIONS)) {
           try {
             const result = await fn(page);
+
+            // A small catalog has no second page and a table with no sortable
+            // header has nothing to sort. Reported as not measured rather than
+            // as a 15-second timeout that describes the probe, not the page.
+            if (result.notApplicable) {
+              notMeasured.push({
+                module: module.key,
+                interaction: name,
+                reason: "control not available on this table",
+              });
+              continue;
+            }
+
             observations.push({
               module: module.key,
               interaction: name,

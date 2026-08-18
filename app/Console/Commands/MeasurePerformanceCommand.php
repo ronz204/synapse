@@ -173,12 +173,28 @@ class MeasurePerformanceCommand extends Command
         if ($observations === []) {
             $this->error('No observations collected — nothing to report.');
 
+            // The reason lives in notMeasured, and the first version of this
+            // discarded it here — reporting the failure while throwing away the
+            // diagnosis, which made the harness impossible to debug from its
+            // own output.
+            foreach ($notMeasured as $gap) {
+                $this->line(sprintf('  %s/%s: %s', $gap['module'], $gap['interaction'], $gap['reason']));
+            }
+
             return self::FAILURE;
         }
 
         $rows = $this->buildRows($observations, $layer);
         $coverageGaps = $this->coverageGaps($rows, $layer);
-        $report = $this->buildReport($layer, $repetitions, $rows, [...$notMeasured, ...$coverageGaps]);
+        $report = $this->buildReport(
+            $layer,
+            $repetitions,
+            $rows,
+            // Deduped: the probe reports a gap once per repetition, so a
+            // 20-repetition run listed the same three tables twenty times and
+            // buried the gaps that mattered.
+            $this->dedupeGaps([...$notMeasured, ...$coverageGaps]),
+        );
 
         if ($this->option('baseline')) {
             return $this->writeBaseline($report);
@@ -385,6 +401,23 @@ class MeasurePerformanceCommand extends Command
         });
 
         return $rows;
+    }
+
+    /**
+     * One entry per module and interaction, keeping the first reason seen.
+     *
+     * @param  array<int, array<string, string>>  $gaps
+     * @return array<int, array<string, string>>
+     */
+    private function dedupeGaps(array $gaps): array
+    {
+        $unique = [];
+
+        foreach ($gaps as $gap) {
+            $unique[$gap['module'].'/'.$gap['interaction']] ??= $gap;
+        }
+
+        return array_values($unique);
     }
 
     private function budgetFor(InteractionClass $class): PerformanceBudget
