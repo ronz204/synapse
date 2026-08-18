@@ -13,6 +13,8 @@
     },
 }">
     <x-ui.data-table
+        :pending-export-id="$pendingExportId"
+        :ready-export-id="$readyExportId"
         :headers="[
                 ['key' => 'code', 'label' => __('Code'), 'sortable' => true],
                 ['key' => 'name', 'label' => __('Name'), 'sortable' => true],
@@ -167,7 +169,7 @@
 
         <x-slot:footer>
             <button type="button" class="btn btn-secondary" wire:click="closeModal">{{ __('Cancel') }}</button>
-            <button type="button" class="btn btn-primary" wire:click="save">{{ __('Confirm') }}</button>
+            <button type="button" class="btn btn-primary" wire:click="save" wire:loading.attr="disabled" wire:target="save">{{ __('Confirm') }}</button>
         </x-slot:footer>
     </x-ui.modal>
 

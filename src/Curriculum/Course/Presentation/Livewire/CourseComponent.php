@@ -23,7 +23,6 @@ use Src\Curriculum\Course\Application\UseCases\UpdateCourseUseCase;
 use Src\Curriculum\Course\Domain\Entities\Course;
 use Src\Curriculum\Course\Presentation\Livewire\Forms\CourseForm;
 use Src\Shared\Export\Contracts\ExcelExporterInterface;
-use Src\Shared\Export\Contracts\PdfExporterInterface;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 #[Layout('layouts.dashboard', ['title' => 'Courses', 'subtitle' => 'Course catalog shared across study plans'])]
@@ -38,7 +37,14 @@ class CourseComponent extends Component
      * course list, not a per-plan-instance record) — client-side by
      * default, same reasoning as Role/Permission.
      */
-    protected string $tableMode = 'client';
+    /**
+     * Server mode: the course catalog reaches ~800 rows at the target volume,
+     * four times the 200-row threshold where shipping the whole table stops
+     * paying for itself (research decision D-01). The threshold, and why the
+     * small catalogs deliberately stay in client mode, are documented on
+     * InteractsWithDataTable.
+     */
+    protected string $tableMode = 'server';
 
     public bool $showModal = false;
 
@@ -132,16 +138,15 @@ class CourseComponent extends Component
         $this->dispatch('toast', variant: 'success', text: __('Course deactivated.'));
     }
 
-    public function exportPdf(PdfExporterInterface $exporter, ListCoursesUseCase $useCase, ?string $search = null): StreamedResponse
+    public function exportPdf(ListCoursesUseCase $useCase, ?string $search = null): void
     {
         $this->authorize('exportPdf', Course::class);
 
-        return $this->streamPdf(
+        $this->queuePdf(
             __('Courses'),
             $this->exportHeaders(),
             $this->exportableRows($useCase, $search),
             Str::slug(__('Courses')).'.pdf',
-            $exporter,
             paperSize: 'letter',
         );
     }

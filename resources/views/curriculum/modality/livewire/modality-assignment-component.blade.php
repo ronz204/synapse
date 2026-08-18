@@ -1,13 +1,16 @@
 <div>
     <x-ui.data-table
+        :pending-export-id="$pendingExportId"
+        :ready-export-id="$readyExportId"
         :headers="[
                 ['key' => 'code', 'label' => __('Code'), 'sortable' => true],
                 ['key' => 'name', 'label' => __('Name'), 'sortable' => true],
                 ['key' => 'modalityName', 'label' => __('Modality'), 'sortable' => false],
                 ['key' => 'resolutionWindow', 'label' => __('Backing resolution'), 'sortable' => false],
             ]"
-        mode="client"
+        mode="server"
         :rows="$rows"
+        :paginator="$assignments"
         :searchable="['code', 'name']"
         :sort-key="$sortKey"
         :sort-dir="$sortDir"
@@ -19,31 +22,35 @@
         :can-export-excel="Auth::user()->can('exportExcel', \Src\Curriculum\Modality\Domain\Entities\ModalityResolution::class)"
         :title="__('Course modality assignments')">
 
-        <template x-for="row in pageRows" :key="row.id">
-            <div class="data-row" role="row">
-                <span class="font-mono text-xs" x-text="row.code"></span>
-                <span x-text="row.name"></span>
-                <span x-text="row.modalityName ?? '{{ __('Default (Presencial)') }}'"></span>
-                <span>
-                    <template x-if="row.resolutionNumber">
-                        <span>
-                            <a href="#" @click.prevent="$wire.downloadDocument(row.resolutionId)" x-text="row.resolutionNumber"></a>
-                            <span x-text="'(' + row.validFrom + (row.validTo ? ' → ' + row.validTo : ' → ' + '{{ __('no end date') }}') + ')'"></span>
-                            <span class="status-badge system" x-show="row.isCurrentlyValid">{{ __('Valid') }}</span>
-                            <span class="status-badge custom" x-show="!row.isCurrentlyValid">{{ __('Expired') }}</span>
-                        </span>
-                    </template>
-                    <template x-if="!row.resolutionNumber && row.requiresResolution">
-                        <span class="status-badge custom">{{ __('None on file') }}</span>
-                    </template>
-                    <template x-if="!row.requiresResolution">
-                        <span>&mdash;</span>
-                    </template>
-                </span>
-                <div class="actions-cell"></div>
-            </div>
-        </template>
-        <div class="empty-row" x-show="pageRows.length === 0">{{ __('No records found') }}</div>
+        {{-- Server mode: Livewire owns search, sort and pagination, so rows are
+             rendered here rather than by Alpine. Feature 002-perceived-performance
+             moved this listing off client mode — it projects every active course,
+             ~800 at the target volume. --}}
+        @forelse ($rows as $row)
+        <div class="data-row" role="row">
+            <span class="font-mono text-xs">{{ $row['code'] }}</span>
+            <span>{{ $row['name'] }}</span>
+            <span>{{ $row['modalityName'] ?? __('Default (Presencial)') }}</span>
+            <span>
+                @if ($row['resolutionNumber'])
+                <a href="#" wire:click.prevent="downloadDocument({{ $row['resolutionId'] }})">{{ $row['resolutionNumber'] }}</a>
+                <span>({{ $row['validFrom'] }} → {{ $row['validTo'] ?? __('no end date') }})</span>
+                @if ($row['isCurrentlyValid'])
+                <span class="status-badge system">{{ __('Valid') }}</span>
+                @else
+                <span class="status-badge custom">{{ __('Expired') }}</span>
+                @endif
+                @elseif ($row['requiresResolution'])
+                <span class="status-badge custom">{{ __('None on file') }}</span>
+                @else
+                <span>&mdash;</span>
+                @endif
+            </span>
+            <div class="actions-cell"></div>
+        </div>
+        @empty
+        <div class="empty-row">{{ __('No records found') }}</div>
+        @endforelse
     </x-ui.data-table>
 
     <x-ui.modal :show="$showModal" :title="__('Assign modality to course')">
@@ -112,7 +119,7 @@
 
         <x-slot:footer>
             <button type="button" class="btn btn-secondary" wire:click="closeModal">{{ __('Cancel') }}</button>
-            <button type="button" class="btn btn-primary" wire:click="assign">{{ __('Confirm') }}</button>
+            <button type="button" class="btn btn-primary" wire:click="assign" wire:loading.attr="disabled" wire:target="assign">{{ __('Confirm') }}</button>
         </x-slot:footer>
     </x-ui.modal>
 </div>

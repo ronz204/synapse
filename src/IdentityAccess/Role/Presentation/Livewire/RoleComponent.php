@@ -24,7 +24,6 @@ use Src\IdentityAccess\Role\Domain\Entities\Role;
 use Src\IdentityAccess\Role\Domain\Exceptions\RoleIsProtectedException;
 use Src\IdentityAccess\Role\Presentation\Livewire\Forms\RoleForm;
 use Src\Shared\Export\Contracts\ExcelExporterInterface;
-use Src\Shared\Export\Contracts\PdfExporterInterface;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 #[Layout('layouts.dashboard', ['title' => 'Roles', 'subtitle' => 'System user roles management'])]
@@ -134,16 +133,15 @@ class RoleComponent extends Component
      * file reproduces what the user is actually looking at. In server mode
      * nothing is passed and $this->search is already authoritative.
      */
-    public function exportPdf(PdfExporterInterface $exporter, ListRolesUseCase $useCase, ?string $search = null): StreamedResponse
+    public function exportPdf(ListRolesUseCase $useCase, ?string $search = null): void
     {
         $this->authorize('exportPdf', Role::class);
 
-        return $this->streamPdf(
+        $this->queuePdf(
             __('Roles'),
             $this->exportHeaders(),
             $this->exportableRows($useCase, $search),
             Str::slug(__('Roles')).'.pdf',
-            $exporter,
             paperSize: 'letter',
         );
     }

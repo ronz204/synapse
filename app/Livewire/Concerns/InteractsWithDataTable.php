@@ -6,6 +6,31 @@ namespace App\Livewire\Concerns;
 
 use Livewire\Attributes\Url;
 
+/**
+ * Which mode a listing should use — the decision, and why it is not "server
+ * everywhere".
+ *
+ * Client mode is not a shortcut, it is a trade: pay one large payload up front,
+ * and every sort, filter and page after that costs nothing because it never
+ * leaves the browser. Below roughly 200 rows that trade is clearly worth it,
+ * and moving those listings to server mode would make them measurably WORSE —
+ * each sort would become a round trip where today it is free.
+ *
+ * Past ~200 rows the trade inverts: the payload starts to dominate the module
+ * open, which is the interaction feature 002-perceived-performance prioritises.
+ * Around 200 rows a table of this width serialises to roughly 40 KB, comparable
+ * to the whole CSS bundle; the round trip that replaces it stays well inside the
+ * 300 ms in-module budget.
+ *
+ * So the rule is a threshold, not a preference:
+ *
+ *   server  Courses (~800), Equivalencies (~500), Modality assignments (~800)
+ *   client  Study plans (~10), Modalities (~10), Roles (~10), Permissions (~50)
+ *
+ * Before switching a listing to client mode, check its size at the target
+ * volume against structural budget S-04; tests/Feature/Performance/QueryBudgetTest
+ * enforces this and will fail if a large catalog is moved back.
+ */
 trait InteractsWithDataTable
 {
     #[Url(as: 'q', history: true)]

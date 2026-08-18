@@ -11,6 +11,8 @@ use App\Models\Modality as ModalityModel;
 use App\Models\ModalityResolution as ModalityResolutionModel;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
@@ -24,7 +26,6 @@ use Src\Curriculum\Modality\Domain\Exceptions\NoValidModalityResolutionException
 use Src\Curriculum\Modality\Presentation\Livewire\Forms\ModalityAssignmentForm;
 use Src\Shared\Document\Contracts\AttachableDocument;
 use Src\Shared\Export\Contracts\ExcelExporterInterface;
-use Src\Shared\Export\Contracts\PdfExporterInterface;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -41,7 +42,11 @@ class ModalityAssignmentComponent extends Component
     use InteractsWithExports;
     use WithFileUploads;
 
-    protected string $tableMode = 'client';
+    /**
+     * Server mode: this listing projects every active course, ~800 at the
+     * target volume, past the 200-row threshold of research decision D-01.
+     */
+    protected string $tableMode = 'server';
 
     public bool $showModal = false;
 
@@ -145,16 +150,15 @@ class ModalityAssignmentComponent extends Component
      * filter only exists in the browser — same reasoning CourseComponent's
      * exportPdf() already documents.
      */
-    public function exportPdf(PdfExporterInterface $exporter, ?string $search = null): StreamedResponse
+    public function exportPdf(?string $search = null): void
     {
         $this->authorize('exportPdf', ModalityResolution::class);
 
-        return $this->streamPdf(
+        $this->queuePdf(
             __('Modality Assignments'),
             $this->exportHeaders(),
             $this->exportableRows($search),
             Str::slug(__('Modality Assignments')).'.pdf',
-            $exporter,
             paperSize: 'letter',
         );
     }
@@ -173,8 +177,16 @@ class ModalityAssignmentComponent extends Component
 
     public function render(): View
     {
+        [$rows, $total] = $this->assignmentPage();
+
         return view('curriculum.modality.livewire.modality-assignment-component', [
-            'rows' => $this->assignmentRows(),
+            'rows' => $rows,
+            'assignments' => new LengthAwarePaginator(
+                items: $rows,
+                total: $total,
+                perPage: $this->perPage,
+                currentPage: $this->page,
+            ),
             'courseOptions' => $this->courseOptions(),
             'modalityOptions' => $this->modalityOptions(),
         ]);
@@ -197,54 +209,129 @@ class ModalityAssignmentComponent extends Component
     }
 
     /**
-     * Read-only "course → current modality" projection, including the
-     * backing resolution's validity window when the modality requires one
-     * — so an expired resolution reads as expired instead of unconditionally
-     * current (the risk this slice's spec explicitly calls out). Pragmatic
-     * cross-aggregate read directly against Eloquent models, same coupling
-     * EquivalencyComponent::toRow() already uses for course codes — no
+     * Read-only "course → current modality" projection, one page at a time.
+     *
+     * Includes the backing resolution's validity window when the modality
+     * requires one, so an expired resolution reads as expired instead of
+     * unconditionally current (the risk this slice's spec calls out).
+     * Pragmatic cross-aggregate read directly against Eloquent models, the same
+     * coupling EquivalencyComponent already uses for course codes — no
      * dedicated use case for a purely presentational listing.
      *
-     * @return array<int, array<string, mixed>>
+     * Two things changed here for feature 002-perceived-performance and both
+     * matter at the target volume (800 courses):
+     *
+     * 1. It pages. The previous version loaded every active course on every
+     *    render and shipped all 800 into the payload, four times the 200-row
+     *    threshold of research decision D-01.
+     * 2. Resolutions are fetched once for the whole page instead of up to twice
+     *    per course. The two-step fallback (a valid resolution if there is one,
+     *    otherwise the latest expired one, so an expired resolution reads as
+     *    expired rather than as absent) is preserved exactly — it is resolved
+     *    in PHP over one result set instead of by two queries per row.
+     *
+     * @param  bool  $all  Exports need the whole filtered set, not one page.
+     * @return array{0: array<int, array<string, mixed>>, 1: int}
      */
-    private function assignmentRows(): array
+    private function assignmentPage(bool $all = false, ?string $search = null): array
     {
-        return CourseModel::query()->active()->with('modality')->orderBy('code')->get()
-            ->map(function (CourseModel $course): array {
-                $modality = $course->modality;
-                $requiresResolution = $modality !== null && $modality->requires_resolution;
-                $resolution = null;
+        $term = $search ?? $this->search;
 
-                if ($requiresResolution) {
-                    $resolution = ModalityResolutionModel::query()
-                        ->where('course_id', $course->id)
-                        ->where('modality_id', $course->modality_id)
-                        ->valid()
-                        ->latest('valid_from')
-                        ->first()
-                        ?? ModalityResolutionModel::query()
-                            ->where('course_id', $course->id)
-                            ->where('modality_id', $course->modality_id)
-                            ->latest('valid_from')
-                            ->first();
-                }
+        $query = CourseModel::query()->active()->with('modality');
 
-                return [
-                    'id' => $course->id,
-                    'code' => $course->code,
-                    'name' => $course->name,
-                    'modalityName' => $modality?->name,
-                    'requiresResolution' => $requiresResolution,
-                    'resolutionId' => $resolution?->id,
-                    'resolutionNumber' => $resolution?->resolution_number,
-                    'validFrom' => $resolution?->valid_from?->toDateString(),
-                    'validTo' => $resolution?->valid_to?->toDateString(),
-                    'isCurrentlyValid' => $resolution !== null
-                        && $resolution->valid_from->lessThanOrEqualTo(now())
-                        && ($resolution->valid_to === null || $resolution->valid_to->greaterThanOrEqualTo(now())),
-                ];
-            })
+        if (filled($term)) {
+            $query->where(function ($inner) use ($term): void {
+                $inner->where('code', 'like', "%{$term}%")
+                    ->orWhere('name', 'like', "%{$term}%");
+            });
+        }
+
+        $column = in_array($this->sortKey, ['code', 'name'], true) ? $this->sortKey : 'code';
+        $direction = $this->sortDir === 'desc' ? 'desc' : 'asc';
+
+        $total = (clone $query)->count();
+
+        $courses = $all
+            ? $query->orderBy($column, $direction)->get()
+            : $query->orderBy($column, $direction)
+                ->forPage(max(1, $this->page), $this->perPage)
+                ->get();
+
+        $resolutions = $this->resolutionsForCourses($courses);
+
+        $rows = $courses->map(function (CourseModel $course) use ($resolutions): array {
+            $modality = $course->modality;
+            $requiresResolution = $modality !== null && $modality->requires_resolution;
+            $resolution = $requiresResolution
+                ? ($resolutions[$course->id.'-'.$course->modality_id] ?? null)
+                : null;
+
+            return [
+                'id' => $course->id,
+                'code' => $course->code,
+                'name' => $course->name,
+                'modalityName' => $modality?->name,
+                'requiresResolution' => $requiresResolution,
+                'resolutionId' => $resolution?->id,
+                'resolutionNumber' => $resolution?->resolution_number,
+                'validFrom' => $resolution?->valid_from?->toDateString(),
+                'validTo' => $resolution?->valid_to?->toDateString(),
+                'isCurrentlyValid' => $resolution !== null
+                    && $resolution->valid_from->lessThanOrEqualTo(now())
+                    && ($resolution->valid_to === null || $resolution->valid_to->greaterThanOrEqualTo(now())),
+            ];
+        })->all();
+
+        return [$rows, $total];
+    }
+
+    /**
+     * Best resolution per (course, modality) for a whole page, in one query.
+     *
+     * "Best" keeps the original preference: a currently valid resolution wins;
+     * failing that, the most recent expired one, so the view can say "Expired"
+     * instead of "None on file" — the distinction this slice's spec calls out.
+     *
+     * @param  Collection<int, CourseModel>  $courses
+     * @return array<string, ModalityResolutionModel>
+     */
+    private function resolutionsForCourses($courses): array
+    {
+        $courseIds = $courses
+            ->filter(fn (CourseModel $course): bool => $course->modality?->requires_resolution === true)
+            ->pluck('id')
             ->all();
+
+        if ($courseIds === []) {
+            return [];
+        }
+
+        $best = [];
+
+        ModalityResolutionModel::query()
+            ->whereIn('course_id', $courseIds)
+            ->orderBy('valid_from')
+            ->get()
+            ->each(function (ModalityResolutionModel $resolution) use (&$best): void {
+                $key = $resolution->course_id.'-'.$resolution->modality_id;
+                $current = $best[$key] ?? null;
+
+                $isValid = $resolution->valid_from->lessThanOrEqualTo(now())
+                    && ($resolution->valid_to === null || $resolution->valid_to->greaterThanOrEqualTo(now()));
+
+                $currentIsValid = $current !== null
+                    && $current->valid_from->lessThanOrEqualTo(now())
+                    && ($current->valid_to === null || $current->valid_to->greaterThanOrEqualTo(now()));
+
+                // Rows arrive oldest-first, so a later row of equal standing
+                // legitimately replaces an earlier one — that is the
+                // latest('valid_from') the two original queries expressed.
+                if ($current === null || $isValid || ! $currentIsValid) {
+                    $best[$key] = $resolution;
+                }
+            });
+
+        return $best;
     }
 
     /**
@@ -252,17 +339,12 @@ class ModalityAssignmentComponent extends Component
      */
     private function exportableRows(?string $search): array
     {
-        $candidate = filled($search) ? $search : $this->search;
+        // Filtering moved into the query: the previous version pulled every
+        // active course into PHP and filtered the array afterwards, which at
+        // 800 courses meant loading the whole catalog to export a handful.
+        [$rows] = $this->assignmentPage(all: true, search: filled($search) ? $search : $this->search);
 
-        if ($candidate === '') {
-            return $this->assignmentRows();
-        }
-
-        return array_values(array_filter(
-            $this->assignmentRows(),
-            fn (array $row) => str_contains(mb_strtolower($row['code']), mb_strtolower($candidate))
-                || str_contains(mb_strtolower($row['name']), mb_strtolower($candidate)),
-        ));
+        return $rows;
     }
 
     /**

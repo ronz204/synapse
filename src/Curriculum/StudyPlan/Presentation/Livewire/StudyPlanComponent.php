@@ -7,6 +7,7 @@ namespace Src\Curriculum\StudyPlan\Presentation\Livewire;
 use App\Enums\PlanClassification;
 use App\Livewire\Concerns\InteractsWithDataTable;
 use App\Livewire\Concerns\InteractsWithExports;
+use App\Models\Course as CourseModel;
 use App\Models\Program;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -35,7 +36,6 @@ use Src\Curriculum\StudyPlan\Domain\Exceptions\PrerequisiteCoursesMustDifferExce
 use Src\Curriculum\StudyPlan\Domain\Exceptions\TerminalPlanRequiresClosingDateException;
 use Src\Curriculum\StudyPlan\Presentation\Livewire\Forms\StudyPlanForm;
 use Src\Shared\Export\Contracts\ExcelExporterInterface;
-use Src\Shared\Export\Contracts\PdfExporterInterface;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -91,6 +91,18 @@ class StudyPlanComponent extends Component
     public string $newPrerequisiteRequired = '';
 
     public string $newPrerequisiteDependent = '';
+
+    /**
+     * Narrows the add-a-course picker. Empty shows the first
+     * COURSE_PICKER_LIMIT courses by code rather than all ~800.
+     */
+    public string $courseSearch = '';
+
+    /**
+     * How many courses the picker offers at once. Large enough to browse,
+     * small enough that the payload stays negligible.
+     */
+    private const COURSE_PICKER_LIMIT = 50;
 
     public function mount(): void
     {
@@ -353,16 +365,15 @@ class StudyPlanComponent extends Component
     // Exports (catalog only — the structure sub-view has no export)
     // ---------------------------------------------------------------
 
-    public function exportPdf(PdfExporterInterface $exporter, ListStudyPlansUseCase $useCase, ?string $search = null): StreamedResponse
+    public function exportPdf(ListStudyPlansUseCase $useCase, ?string $search = null): void
     {
         $this->authorize('exportPdf', StudyPlan::class);
 
-        return $this->streamPdf(
+        $this->queuePdf(
             __('Study Plans'),
             $this->exportHeaders(),
             $this->exportableRows($useCase, $search),
             Str::slug(__('Study Plans')).'.pdf',
-            $exporter,
             paperSize: 'letter',
         );
     }
@@ -408,7 +419,11 @@ class StudyPlanComponent extends Component
         return view('curriculum.study-plan.livewire.study-plan-structure', [
             'studyPlan' => $findUseCase->handle($this->viewingPlanId),
             'activeStudentCounts' => $countsUseCase->handle($this->viewingPlanId),
+            // Two distinct sets on purpose — see courseOptions() and
+            // planCourseOptions() for why the full catalog is the wrong answer
+            // for the lookups and for the prerequisite pickers.
             'courseOptions' => $this->courseOptions($coursesUseCase),
+            'planCourseOptions' => $this->planCourseOptions(),
         ]);
     }
 
@@ -507,18 +522,78 @@ class StudyPlanComponent extends Component
     }
 
     /**
-     * Read-only catalog for the structure sub-view's course pickers
-     * (add-course-to-level, add-prerequisite). Cross-aggregate read within
-     * the same Curriculum bounded context — same pragmatic coupling
-     * RoleComponent already uses to read the Permission catalog.
+     * Catalog for the "add a course to this level" picker. Cross-aggregate
+     * read within the same Curriculum bounded context — same pragmatic
+     * coupling RoleComponent already uses to read the Permission catalog.
+     *
+     * Capped and searchable rather than exhaustive: this used to render every
+     * active course, ~800 at the target volume, on every render of the
+     * structure sub-view. A dropdown with 800 entries is not usable anyway, so
+     * the fix is the same in both directions — type to narrow it down.
+     *
+     * paginate() is used instead of all() so the cap happens in SQL. It is an
+     * existing repository method with a stable signature; no contract changes.
      *
      * @return array<int, array{id: int, code: string, name: string}>
      */
     private function courseOptions(ListCoursesUseCase $useCase): array
     {
+        $result = $useCase->paginate(
+            search: $this->courseSearch !== '' ? $this->courseSearch : null,
+            perPage: self::COURSE_PICKER_LIMIT,
+            page: 1,
+            sortBy: 'code',
+        );
+
         return array_map(
             static fn (Course $course) => ['id' => $course->id(), 'code' => $course->code(), 'name' => $course->name()],
-            $useCase->all(sortBy: 'code'),
+            $result['items'],
         );
+    }
+
+    /**
+     * The courses this plan already links, for two jobs the full catalog was
+     * doing badly:
+     *
+     * - resolving a code and name for rows already on screen, which only ever
+     *   needs the plan's own courses;
+     * - populating the prerequisite pickers. Those should never have offered
+     *   the whole catalog: the domain rejects a prerequisite pointing at a
+     *   course outside the plan (PrerequisiteCourseNotLinkedToPlanException),
+     *   so offering one was inviting a guaranteed rejection.
+     *
+     * ~80 rows instead of ~800, and a narrower, more correct choice.
+     *
+     * @return array<int, array{id: int, code: string, name: string}>
+     */
+    private function planCourseOptions(): array
+    {
+        $ids = [];
+
+        foreach ($this->structureLevels as $level) {
+            foreach ($level['courses'] as $link) {
+                $ids[] = (int) $link['course_id'];
+            }
+        }
+
+        foreach ($this->structurePrerequisites as $prerequisite) {
+            $ids[] = (int) $prerequisite['required_course_id'];
+            $ids[] = (int) $prerequisite['dependent_course_id'];
+        }
+
+        if ($ids === []) {
+            return [];
+        }
+
+        return CourseModel::query()
+            ->whereIn('id', array_unique($ids))
+            ->orderBy('code')
+            ->get(['id', 'code', 'name'])
+            ->map(static fn (CourseModel $course) => [
+                'id' => $course->id,
+                'code' => $course->code,
+                'name' => $course->name,
+            ])
+            ->all();
     }
 }

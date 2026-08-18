@@ -1,5 +1,7 @@
 <div>
     <x-ui.data-table
+        :pending-export-id="$pendingExportId"
+        :ready-export-id="$readyExportId"
         :headers="[
                 ['key' => 'sourceCourseCode', 'label' => __('Source'), 'sortable' => false],
                 ['key' => 'targetCourseCode', 'label' => __('Target'), 'sortable' => false],
@@ -88,6 +90,14 @@
     <x-ui.modal :show="$showModal" :title="$conflictingEquivalencyId === null ? __('Register equivalency') : __('Resolve contradiction')">
         @if ($conflictingEquivalencyId === null)
         {{-- Plain registration form. --}}
+        {{-- Narrows both pickers below. Without it the modal renders the whole
+             active catalog — ~800 options each — on every component render. --}}
+        <div class="form-field">
+            <label for="equivalencyCourseSearch">{{ __('Search courses') }}</label>
+            <input id="equivalencyCourseSearch" type="search" wire:model.live.debounce.250ms="courseSearch"
+                placeholder="{{ __('Type a code or name to narrow the lists...') }}">
+        </div>
+
         <div class="form-field">
             <label for="equivalencySourceCourse">{{ __('Source course (old plan)') }}</label>
             <select id="equivalencySourceCourse" wire:model="form.sourceCourseId" class="{{ $errors->has('form.sourceCourseId') ? 'has-error' : '' }}">
@@ -136,7 +146,7 @@
 
         <x-slot:footer>
             <button type="button" class="btn btn-secondary" wire:click="closeModal">{{ __('Cancel') }}</button>
-            <button type="button" class="btn btn-primary" wire:click="register">{{ __('Confirm') }}</button>
+            <button type="button" class="btn btn-primary" wire:click="register" wire:loading.attr="disabled" wire:target="register">{{ __('Confirm') }}</button>
         </x-slot:footer>
         @else
         {{-- Contradiction detected: show both conflicting records and require
@@ -160,8 +170,8 @@
         </div>
 
         <x-slot:footer>
-            <button type="button" class="btn btn-secondary" wire:click="resolveContradiction('existing')">{{ __('Keep existing resolution') }}</button>
-            <button type="button" class="btn btn-primary" wire:click="resolveContradiction('candidate')">{{ __('Use new resolution') }}</button>
+            <button type="button" class="btn btn-secondary" wire:click="resolveContradiction('existing')" wire:loading.attr="disabled" wire:target="resolveContradiction">{{ __('Keep existing resolution') }}</button>
+            <button type="button" class="btn btn-primary" wire:click="resolveContradiction('candidate')" wire:loading.attr="disabled" wire:target="resolveContradiction">{{ __('Use new resolution') }}</button>
         </x-slot:footer>
         @endif
     </x-ui.modal>

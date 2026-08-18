@@ -22,7 +22,6 @@ use Src\Curriculum\Modality\Domain\Exceptions\ModalityInUseException;
 use Src\Curriculum\Modality\Domain\Exceptions\ModalityNameAlreadyExistsException;
 use Src\Curriculum\Modality\Presentation\Livewire\Forms\ModalityForm;
 use Src\Shared\Export\Contracts\ExcelExporterInterface;
-use Src\Shared\Export\Contracts\PdfExporterInterface;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 #[Layout('layouts.dashboard', ['title' => 'Modalities', 'subtitle' => 'Teaching modality catalog'])]
@@ -122,16 +121,15 @@ class ModalityComponent extends Component
         $this->dispatch('toast', variant: 'success', text: __('Modality deleted.'));
     }
 
-    public function exportPdf(PdfExporterInterface $exporter, ListModalitiesUseCase $useCase, ?string $search = null): StreamedResponse
+    public function exportPdf(ListModalitiesUseCase $useCase, ?string $search = null): void
     {
         $this->authorize('exportPdf', Modality::class);
 
-        return $this->streamPdf(
+        $this->queuePdf(
             __('Modalities'),
             $this->exportHeaders(),
             $this->exportableRows($useCase, $search),
             Str::slug(__('Modalities')).'.pdf',
-            $exporter,
             paperSize: 'letter',
         );
     }

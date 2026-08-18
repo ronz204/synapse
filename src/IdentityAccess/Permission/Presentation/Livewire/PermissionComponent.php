@@ -20,7 +20,6 @@ use Src\IdentityAccess\Permission\Application\UseCases\UpdatePermissionUseCase;
 use Src\IdentityAccess\Permission\Domain\Entities\Permission;
 use Src\IdentityAccess\Permission\Presentation\Livewire\Forms\PermissionForm;
 use Src\Shared\Export\Contracts\ExcelExporterInterface;
-use Src\Shared\Export\Contracts\PdfExporterInterface;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 #[Layout('layouts.dashboard', ['title' => 'Permissions', 'subtitle' => 'Permissions management assigned to each role'])]
@@ -108,16 +107,15 @@ class PermissionComponent extends Component
      * See RoleComponent::exportPdf() for why $search is a parameter here
      * rather than read off $this->search.
      */
-    public function exportPdf(PdfExporterInterface $exporter, ListPermissionsUseCase $useCase, ?string $search = null): StreamedResponse
+    public function exportPdf(ListPermissionsUseCase $useCase, ?string $search = null): void
     {
         $this->authorize('exportPdf', Permission::class);
 
-        return $this->streamPdf(
+        $this->queuePdf(
             __('Permissions'),
             $this->exportHeaders(),
             $this->exportableRows($useCase, $search),
             Str::slug(__('Permissions')).'.pdf',
-            $exporter,
             paperSize: 'letter',
         );
     }

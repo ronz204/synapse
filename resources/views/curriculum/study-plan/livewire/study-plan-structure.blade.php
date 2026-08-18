@@ -19,7 +19,7 @@
             <div class="card-actions">
                 <button type="button" class="btn btn-secondary" wire:click="backToCatalog">{{ __('Back to catalog') }}</button>
                 @if (Auth::user()->can('update', $studyPlan))
-                <button type="button" class="btn btn-orange" wire:click="saveStructure">{{ __('Save structure') }}</button>
+                <button type="button" class="btn btn-orange" wire:click="saveStructure" wire:loading.attr="disabled" wire:target="saveStructure">{{ __('Save structure') }}</button>
                 @endif
             </div>
         </div>
@@ -62,7 +62,7 @@
 
                 @forelse ($level['courses'] as $courseLink)
                 @php
-                    $courseInfo = collect($courseOptions)->firstWhere('id', $courseLink['course_id']);
+                    $courseInfo = collect($planCourseOptions)->firstWhere('id', $courseLink['course_id']);
                 @endphp
                 <div class="data-row" role="row" wire:key="course-{{ $level['key'] }}-{{ $courseLink['course_id'] }}">
                     <span class="font-mono text-xs">{{ $courseInfo['code'] ?? $courseLink['course_id'] }}</span>
@@ -88,6 +88,11 @@
         @if (Auth::user()->can('update', $studyPlan))
         <div class="card-controls">
             <div class="control-group">
+                {{-- Type to narrow the catalog instead of rendering all ~800
+                     courses into every level's dropdown on every render. --}}
+                <input type="search" wire:model.live.debounce.250ms="courseSearch"
+                    placeholder="{{ __('Search courses...') }}" aria-label="{{ __('Search courses') }}"
+                    style="width: 160px;">
                 <select wire:model="newCourseSelection.{{ $level['key'] }}.course_id" style="min-width: 220px;">
                     <option value="">{{ __('Select a course...') }}</option>
                     @foreach ($courseOptions as $course)
@@ -121,8 +126,8 @@
 
                 @forelse ($structurePrerequisites as $prerequisite)
                 @php
-                    $requiredInfo = collect($courseOptions)->firstWhere('id', $prerequisite['required_course_id']);
-                    $dependentInfo = collect($courseOptions)->firstWhere('id', $prerequisite['dependent_course_id']);
+                    $requiredInfo = collect($planCourseOptions)->firstWhere('id', $prerequisite['required_course_id']);
+                    $dependentInfo = collect($planCourseOptions)->firstWhere('id', $prerequisite['dependent_course_id']);
                 @endphp
                 <div class="data-row" role="row" wire:key="prerequisite-{{ $prerequisite['key'] }}">
                     <span>{{ $requiredInfo['code'] ?? $prerequisite['required_course_id'] }} — {{ $requiredInfo['name'] ?? '' }}</span>
@@ -147,17 +152,20 @@
         @if (Auth::user()->can('update', $studyPlan))
         <div class="card-controls">
             <div class="control-group">
+                {{-- Only courses already linked to this plan. The domain rejects
+                     a prerequisite pointing outside the plan, so offering the
+                     whole catalog here was offering a guaranteed rejection. --}}
                 <span>{{ __('Required') }}</span>
                 <select wire:model="newPrerequisiteRequired" style="min-width: 200px;">
                     <option value="">{{ __('Select a course...') }}</option>
-                    @foreach ($courseOptions as $course)
+                    @foreach ($planCourseOptions as $course)
                     <option value="{{ $course['id'] }}">{{ $course['code'] }} — {{ $course['name'] }}</option>
                     @endforeach
                 </select>
                 <span>{{ __('Dependent') }}</span>
                 <select wire:model="newPrerequisiteDependent" style="min-width: 200px;">
                     <option value="">{{ __('Select a course...') }}</option>
-                    @foreach ($courseOptions as $course)
+                    @foreach ($planCourseOptions as $course)
                     <option value="{{ $course['id'] }}">{{ $course['code'] }} — {{ $course['name'] }}</option>
                     @endforeach
                 </select>

@@ -28,7 +28,6 @@ use Src\Curriculum\Equivalency\Domain\Exceptions\EquivalencyDocumentRequiredExce
 use Src\Curriculum\Equivalency\Presentation\Livewire\Forms\EquivalencyForm;
 use Src\Shared\Document\Contracts\AttachableDocument;
 use Src\Shared\Export\Contracts\ExcelExporterInterface;
-use Src\Shared\Export\Contracts\PdfExporterInterface;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 #[Layout('layouts.dashboard', ['title' => 'Equivalencies', 'subtitle' => 'Cross-plan course equivalencies and their integrity checks'])]
@@ -39,7 +38,14 @@ class EquivalencyComponent extends Component
     use InteractsWithExports;
     use WithFileUploads;
 
-    protected string $tableMode = 'client';
+    /**
+     * Server mode: this catalog reaches ~500 rows at the target volume, well
+     * past the 200-row threshold where shipping the whole table stops paying
+     * for itself (research decision D-01). Small catalogs — Roles, Modalities,
+     * Permissions, Study Plans — stay in client mode on purpose: for them the
+     * round trip this mode adds would be a regression, not an improvement.
+     */
+    protected string $tableMode = 'server';
 
     public bool $showModal = false;
 
@@ -54,6 +60,14 @@ class EquivalencyComponent extends Component
      * the exact same candidate from it.
      */
     public ?int $conflictingEquivalencyId = null;
+
+    /**
+     * Narrows the source/target course pickers. Empty shows the first
+     * COURSE_PICKER_LIMIT courses by code rather than all ~800.
+     */
+    public string $courseSearch = '';
+
+    private const COURSE_PICKER_LIMIT = 50;
 
     public function mount(): void
     {
@@ -188,16 +202,15 @@ class EquivalencyComponent extends Component
         );
     }
 
-    public function exportPdf(PdfExporterInterface $exporter, ListEquivalenciesUseCase $useCase, ?string $search = null): StreamedResponse
+    public function exportPdf(ListEquivalenciesUseCase $useCase, ?string $search = null): void
     {
         $this->authorize('exportPdf', Equivalency::class);
 
-        return $this->streamPdf(
+        $this->queuePdf(
             __('Equivalencies'),
             $this->exportHeaders(),
             $this->exportableRows($useCase, $search),
             Str::slug(__('Equivalencies')).'.pdf',
-            $exporter,
             paperSize: 'letter',
         );
     }
@@ -243,8 +256,11 @@ class EquivalencyComponent extends Component
             sortDir: $this->sortDir,
         );
 
+        // The view reads array keys, not Domain Entities. Before this feature
+        // the paginator was handed raw entities here and the server path had
+        // never actually been rendered, so the mismatch went unnoticed.
         $paginator = new LengthAwarePaginator(
-            items: $result['items'],
+            items: $this->toRows($result['items']),
             total: $result['total'],
             perPage: $this->perPage,
             currentPage: $this->page,
@@ -262,32 +278,63 @@ class EquivalencyComponent extends Component
      * are a deliberate cross-aggregate read at this layer, same pragmatic
      * coupling StudyPlanComponent::courseOptions() already uses.
      *
-     * @return array<string, mixed>
+     * Mapping is done for the WHOLE set at once, never one row at a time.
+     * The per-row version of this method cost two queries per equivalency —
+     * measured at 657 queries and 4.150 ms p95 to open this module at the
+     * target volume (see specs/002-perceived-performance/baseline.json). The
+     * cross-aggregate read did not change; only how often it happens.
+     *
+     * @param  array<int, Equivalency>  $equivalencies
+     * @return array<int, array<string, mixed>>
      */
-    private function toRow(Equivalency $equivalency): array
+    private function toRows(array $equivalencies): array
     {
-        $courses = CourseModel::query()
-            ->whereIn('id', [$equivalency->sourceCourseId(), $equivalency->targetCourseId()])
-            ->get(['id', 'code'])
-            ->keyBy('id');
+        if ($equivalencies === []) {
+            return [];
+        }
 
-        return [
-            'id' => $equivalency->id(),
-            // Both ids always resolve: the FK is restrictOnDelete, so a
-            // course referenced by an equivalency can never be missing.
-            'sourceCourseCode' => $courses->get($equivalency->sourceCourseId())->code,
-            'targetCourseCode' => $courses->get($equivalency->targetCourseId())->code,
-            'direction' => $equivalency->direction()->name,
-            'resolutionNumber' => $equivalency->resolutionNumber(),
-            'status' => $equivalency->status()->name,
-            'isActive' => $equivalency->isActive(),
-            'supersededById' => $equivalency->supersededById(),
-            // Surfaces which resolution actually prevailed, so a Superseded
-            // row reads as an auditable trail instead of a dead end.
-            'supersededByResolutionNumber' => $equivalency->supersededById() !== null
-                ? EquivalencyModel::query()->find($equivalency->supersededById())?->resolution_number
-                : null,
-        ];
+        $courseIds = [];
+        $supersedingIds = [];
+
+        foreach ($equivalencies as $equivalency) {
+            $courseIds[] = $equivalency->sourceCourseId();
+            $courseIds[] = $equivalency->targetCourseId();
+
+            if ($equivalency->supersededById() !== null) {
+                $supersedingIds[] = $equivalency->supersededById();
+            }
+        }
+
+        $courseCodes = CourseModel::query()
+            ->whereIn('id', array_unique($courseIds))
+            ->pluck('code', 'id');
+
+        $supersedingResolutions = $supersedingIds === []
+            ? collect()
+            : EquivalencyModel::query()
+                ->whereIn('id', array_unique($supersedingIds))
+                ->pluck('resolution_number', 'id');
+
+        return array_map(
+            fn (Equivalency $equivalency): array => [
+                'id' => $equivalency->id(),
+                // Both ids always resolve: the FK is restrictOnDelete, so a
+                // course referenced by an equivalency can never be missing.
+                'sourceCourseCode' => $courseCodes[$equivalency->sourceCourseId()],
+                'targetCourseCode' => $courseCodes[$equivalency->targetCourseId()],
+                'direction' => $equivalency->direction()->name,
+                'resolutionNumber' => $equivalency->resolutionNumber(),
+                'status' => $equivalency->status()->name,
+                'isActive' => $equivalency->isActive(),
+                'supersededById' => $equivalency->supersededById(),
+                // Surfaces which resolution actually prevailed, so a Superseded
+                // row reads as an auditable trail instead of a dead end.
+                'supersededByResolutionNumber' => $equivalency->supersededById() !== null
+                    ? $supersedingResolutions[$equivalency->supersededById()] ?? null
+                    : null,
+            ],
+            $equivalencies,
+        );
     }
 
     /**
@@ -295,7 +342,7 @@ class EquivalencyComponent extends Component
      */
     private function freshRows(ListEquivalenciesUseCase $useCase): array
     {
-        return array_map($this->toRow(...), $useCase->all(sortBy: $this->sortKey, sortDir: $this->sortDir));
+        return $this->toRows($useCase->all(sortBy: $this->sortKey, sortDir: $this->sortDir));
     }
 
     /**
@@ -305,8 +352,7 @@ class EquivalencyComponent extends Component
     {
         $candidate = filled($search) ? $search : $this->search;
 
-        return array_map(
-            $this->toRow(...),
+        return $this->toRows(
             $useCase->all(
                 search: $candidate !== '' ? $candidate : null,
                 sortBy: $this->sortKey,
@@ -334,7 +380,36 @@ class EquivalencyComponent extends Component
      */
     private function courseOptions(): array
     {
-        return CourseModel::query()->active()->orderBy('code')->get(['id', 'code', 'name'])
+        // Capped and searchable. This used to return every active course —
+        // ~800 at the target volume — and render them into two <select>
+        // elements on every single render of the component, modal open or not.
+        // Whatever is currently selected is always included, so narrowing the
+        // search can never silently drop the user's own choice.
+        $selected = array_values(array_filter([
+            $this->form->sourceCourseId,
+            $this->form->targetCourseId,
+        ]));
+
+        $search = $this->courseSearch;
+
+        $query = CourseModel::query()->where(function ($outer) use ($search, $selected): void {
+            $outer->where(function ($matching) use ($search): void {
+                $matching->where('active', true);
+
+                if ($search !== '') {
+                    $matching->where(function ($term) use ($search): void {
+                        $term->where('code', 'like', "%{$search}%")
+                            ->orWhere('name', 'like', "%{$search}%");
+                    });
+                }
+            });
+
+            if ($selected !== []) {
+                $outer->orWhereIn('id', $selected);
+            }
+        });
+
+        return $query->orderBy('code')->limit(self::COURSE_PICKER_LIMIT)->get(['id', 'code', 'name'])
             ->map(fn (CourseModel $course) => ['id' => $course->id, 'code' => $course->code, 'name' => $course->name])
             ->all();
     }
