@@ -19,6 +19,7 @@ use App\Models\StudentAcademicRecord;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
+use Src\Curriculum\AcademicHistory\Presentation\Livewire\AcademicHistoryComponent;
 use Src\Curriculum\Equivalency\Presentation\Livewire\EquivalencyComponent;
 
 beforeEach(function (): void {
@@ -136,4 +137,61 @@ it('RC-02b — a "new → old" resolution accredits only in that registered dire
         ->where('student_id', $passedOld->id)
         ->where('course_id', $newCourse->id)
         ->exists())->toBeFalse();
+});
+
+it('RC-02b Entradas/Salidas — the student list and the accredited course with its resolution are readable in the application', function (): void {
+    // The two criteria above assert the state of the history. This asserts
+    // the requirement's stated input and output: that the list of test
+    // students can be consulted, and that the accredited course is legible
+    // *together with* the resolution number — neither of which the domain
+    // assertions cover, since a correct record nobody can reach still leaves
+    // the requirement's Salidas unmet.
+    $oldCourse = Course::factory()->create(['code' => 'RC02B-VIEW-OLD']);
+    $newCourse = Course::factory()->create(['code' => 'RC02B-VIEW-NEW', 'name' => 'Course reached by equivalency']);
+    $student = Student::factory()->create(['national_id' => '9-9999-9999']);
+
+    StudentAcademicRecord::query()->create([
+        'student_id' => $student->id,
+        'course_id' => $oldCourse->id,
+        'status' => AcademicRecordStatus::Passed,
+    ]);
+
+    rc02bRegisterEquivalency($oldCourse, $newCourse, EquivalencyDirection::OldToNew, 'RC02B-VIEW-001');
+
+    $reader = userWithPermissions(['academic_records.view']);
+
+    Livewire::actingAs($reader)
+        ->test(AcademicHistoryComponent::class)
+        // Entrada: the list of test students is consultable.
+        ->assertSee('9-9999-9999')
+        ->call('viewHistory', $student->id)
+        // Salida: the target course, marked accredited, next to its resolution.
+        ->assertSee('RC02B-VIEW-NEW')
+        ->assertSee('Course reached by equivalency')
+        ->assertSee(AcademicRecordStatus::AccreditedByEquivalency->value)
+        ->assertSee('RC02B-VIEW-001');
+});
+
+it('RC-02b Salidas — a student the resolution does not reach shows no accreditation in their history', function (): void {
+    $oldCourse = Course::factory()->create(['code' => 'RC02B-BLANK-OLD']);
+    $newCourse = Course::factory()->create(['code' => 'RC02B-BLANK-NEW']);
+    $student = Student::factory()->create();
+
+    // Passed the *new* course, while the resolution runs old → new: nothing
+    // should be accredited for this student.
+    StudentAcademicRecord::query()->create([
+        'student_id' => $student->id,
+        'course_id' => $newCourse->id,
+        'status' => AcademicRecordStatus::Passed,
+    ]);
+
+    rc02bRegisterEquivalency($oldCourse, $newCourse, EquivalencyDirection::OldToNew, 'RC02B-BLANK-001');
+
+    Livewire::actingAs(userWithPermissions(['academic_records.view']))
+        ->test(AcademicHistoryComponent::class)
+        ->call('viewHistory', $student->id)
+        ->assertSee('RC02B-BLANK-NEW')
+        ->assertSee(AcademicRecordStatus::Passed->value)
+        ->assertDontSee(AcademicRecordStatus::AccreditedByEquivalency->value)
+        ->assertDontSee('RC02B-BLANK-001');
 });

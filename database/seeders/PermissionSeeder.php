@@ -61,6 +61,7 @@ class PermissionSeeder extends Seeder
             'equivalencies' => 'equiparaciones',
             'modalities' => 'modalidades',
             'modality_resolutions' => 'resoluciones de modalidad',
+            'academic_records' => 'historiales académicos',
         ];
 
         $standardActions = ['view', 'search', 'create', 'edit', 'delete', 'export_pdf', 'export_excel'];
@@ -68,6 +69,9 @@ class PermissionSeeder extends Seeder
             'study_plans' => ['view', 'search', 'create', 'edit', 'export_pdf', 'export_excel'],
             'equivalencies' => ['view', 'search', 'create', 'resolve_contradiction', 'export_pdf', 'export_excel'],
             'modality_resolutions' => ['view', 'search', 'create', 'export_pdf', 'export_excel'],
+            // Read-only slice: the history is written by the Accreditation
+            // context reacting to an equivalency, never from its own screen.
+            'academic_records' => ['view', 'search'],
         ];
 
         $actionDescriptions = [
