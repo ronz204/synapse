@@ -980,6 +980,8 @@ select:focus[data-flux-control] {
     }
 
     .form-field input[type="text"],
+    .form-field input[type="number"],
+    .form-field input[type="date"],
     .form-field input[type="file"],
     .form-field textarea,
     .form-field select {
@@ -1004,6 +1006,8 @@ select:focus[data-flux-control] {
     }
 
     .form-field input[type="text"]:focus,
+    .form-field input[type="number"]:focus,
+    .form-field input[type="date"]:focus,
     .form-field textarea:focus,
     .form-field select:focus {
         outline: none;
@@ -1559,6 +1563,16 @@ select:focus[data-flux-control] {
     .status-badge.custom {
         background: var(--color-status-success-subtle);
         color: var(--color-status-success);
+    }
+
+    /* Neutral/closed lifecycle state — e.g. a Terminal study plan or an
+       inactive course. Deliberately not `.custom` (success/green): those
+       states are not a "good" outcome to celebrate, just a different one,
+       and colouring them green reads as backwards next to the state that
+       actually is in good standing. */
+    .status-badge.muted {
+        background: var(--color-background-disabled);
+        color: var(--color-text-tertiary);
     }
 
     .actions-cell {
