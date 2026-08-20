@@ -110,6 +110,21 @@
             </a>
             @endif
 
+            @if (Route::has('curriculum.academic_history.index'))
+            <a href="{{ route('curriculum.academic_history.index') }}" wire:navigate wire:current="active" class="nav-item">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 7a3 3 0 1 0 6 0 3 3 0 0 0-6 0"></path>
+                    <path d="M5 21v-1a5 5 0 0 1 5-5h1"></path>
+                    <path d="M15 17h6"></path>
+                    <path d="M18 14v6"></path>
+                </svg>
+                <span class="nav-text" data-labels>{{ __('Academic History') }}</span>
+                <svg class="nav-chevron" data-labels width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="opacity:.6;">
+                    <polyline points="9 6 15 12 9 18"></polyline>
+                </svg>
+            </a>
+            @endif
+
             @if (Route::has('curriculum.modality.index'))
             <a href="{{ route('curriculum.modality.index') }}" wire:navigate wire:current="active" class="nav-item">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">

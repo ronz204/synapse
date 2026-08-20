@@ -31,6 +31,9 @@ class PermissionRoleSeeder extends Seeder
         $equivalencyPermissions = ['equivalencies.view', 'equivalencies.search', 'equivalencies.create', 'equivalencies.resolve_contradiction', 'equivalencies.export_pdf', 'equivalencies.export_excel'];
         $modalityPermissions = ['modalities.view', 'modalities.search', 'modalities.create', 'modalities.edit', 'modalities.delete', 'modalities.export_pdf', 'modalities.export_excel'];
         $modalityResolutionPermissions = ['modality_resolutions.view', 'modality_resolutions.search', 'modality_resolutions.create', 'modality_resolutions.export_pdf', 'modality_resolutions.export_excel'];
+        // RC-02b's history is the readable side of the equivalencies these
+        // same three roles already register, so it follows the same grant.
+        $academicRecordPermissions = ['academic_records.view', 'academic_records.search'];
 
         $matrix = [
             'Administrador' => [
@@ -39,14 +42,14 @@ class PermissionRoleSeeder extends Seeder
                 'archivos.descargar', 'resoluciones.gestionar', 'reservas.gestionar', 'oferta.consolidar',
                 'planes.gestionar', 'equiparaciones.gestionar', 'solicitudes.crear', 'solicitudes.revisar',
                 ...$coursePermissions, ...$studyPlanPermissions, ...$equivalencyPermissions,
-                ...$modalityPermissions, ...$modalityResolutionPermissions,
+                ...$modalityPermissions, ...$modalityResolutionPermissions, ...$academicRecordPermissions,
             ],
             'Coordinadora de Docencia' => [
                 'atestados.gestionar', 'oferta.gestionar', 'atinencia.verificar', 'oferta.consultar',
                 'archivos.subir', 'archivos.descargar', 'resoluciones.gestionar', 'reservas.gestionar',
                 'oferta.consolidar', 'planes.gestionar', 'equiparaciones.gestionar', 'solicitudes.revisar',
                 ...$coursePermissions, ...$studyPlanPermissions, ...$equivalencyPermissions,
-                ...$modalityPermissions, ...$modalityResolutionPermissions,
+                ...$modalityPermissions, ...$modalityResolutionPermissions, ...$academicRecordPermissions,
             ],
             'Docente' => ['oferta.consultar', 'archivos.descargar'],
             'Consulta' => ['oferta.consultar'],
@@ -54,7 +57,7 @@ class PermissionRoleSeeder extends Seeder
                 'oferta.gestionar', 'oferta.consultar', 'archivos.subir', 'archivos.descargar',
                 'resoluciones.gestionar', 'planes.gestionar', 'equiparaciones.gestionar',
                 ...$coursePermissions, ...$studyPlanPermissions, ...$equivalencyPermissions,
-                ...$modalityPermissions, ...$modalityResolutionPermissions,
+                ...$modalityPermissions, ...$modalityResolutionPermissions, ...$academicRecordPermissions,
             ],
             'Coordinador CONTA' => ['oferta.consultar', 'archivos.descargar', 'oferta.consolidar'],
             'Recursos Humanos' => ['oferta.consultar', 'archivos.descargar'],

@@ -10,6 +10,10 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
+use Src\Curriculum\AcademicHistory\Domain\Contracts\AcademicHistoryRepositoryInterface;
+use Src\Curriculum\AcademicHistory\Domain\Entities\StudentAcademicHistory;
+use Src\Curriculum\AcademicHistory\Infrastructure\Persistence\Repositories\EloquentAcademicHistoryRepository;
+use Src\Curriculum\AcademicHistory\Presentation\Policies\AcademicHistoryPolicy;
 use Src\Curriculum\Accreditation\Domain\Contracts\AccreditationRepositoryInterface;
 use Src\Curriculum\Accreditation\Infrastructure\Persistence\Repositories\EloquentAccreditationRepository;
 use Src\Curriculum\Accreditation\Presentation\Listeners\GrantAccreditationOnAcademicRecordPassed;
@@ -71,6 +75,7 @@ final class DomainServiceProvider extends ServiceProvider
         AccreditationRepositoryInterface::class => EloquentAccreditationRepository::class,
         ModalityRepositoryInterface::class => EloquentModalityRepository::class,
         ModalityResolutionRepositoryInterface::class => EloquentModalityResolutionRepository::class,
+        AcademicHistoryRepositoryInterface::class => EloquentAcademicHistoryRepository::class,
 
         // Shared, entity-agnostic capabilities rather than per-context ports:
         // turning rows into a file, or attaching a document to whatever owns
@@ -92,6 +97,7 @@ final class DomainServiceProvider extends ServiceProvider
         Equivalency::class => EquivalencyPolicy::class,
         Modality::class => ModalityPolicy::class,
         ModalityResolution::class => ModalityResolutionPolicy::class,
+        StudentAcademicHistory::class => AcademicHistoryPolicy::class,
     ];
 
     /**
