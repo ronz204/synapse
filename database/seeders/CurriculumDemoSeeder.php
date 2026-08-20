@@ -18,7 +18,8 @@ use Illuminate\Database\Seeder;
  * Fake demo data for RC-01 (Study Plan Repository), so the UI can be
  * exercised manually before any real institutional data exists.
  *
- * Deliberately NOT called from DatabaseSeeder::run() — run it by hand:
+ * Called from DatabaseSeeder::run() after the catalog seeders. Can also be
+ * run standalone:
  *
  *   php artisan db:seed --class=CurriculumDemoSeeder
  *
