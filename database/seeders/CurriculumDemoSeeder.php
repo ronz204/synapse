@@ -47,7 +47,7 @@ class CurriculumDemoSeeder extends Seeder
 
         $activePlan = $this->seedPlan(
             program: $primaryProgram,
-            name: 'Demo Plan '.now()->year,
+            name: 'Plan Demo '.now()->year,
             classification: PlanClassification::Active,
             closingDate: null,
             courses: $courses,
@@ -55,7 +55,7 @@ class CurriculumDemoSeeder extends Seeder
 
         $this->seedPlan(
             program: $primaryProgram,
-            name: 'Demo Plan '.(now()->year - 6).' (Terminal)',
+            name: 'Plan Demo '.(now()->year - 6).' (Terminal)',
             classification: PlanClassification::Terminal,
             closingDate: now()->addYear(),
             courses: $courses,
@@ -72,21 +72,21 @@ class CurriculumDemoSeeder extends Seeder
     private function seedCourses(Program $primaryProgram, Program $secondaryProgram): array
     {
         $definitions = [
-            ['code' => 'DEMO-101', 'name' => 'Introduction to Programming', 'program' => $primaryProgram],
-            ['code' => 'DEMO-102', 'name' => 'Discrete Mathematics', 'program' => $primaryProgram],
-            ['code' => 'DEMO-103', 'name' => 'Data Structures', 'program' => $primaryProgram],
-            ['code' => 'DEMO-104', 'name' => 'Databases I', 'program' => $primaryProgram],
-            ['code' => 'DEMO-105', 'name' => 'Object-Oriented Programming', 'program' => $primaryProgram],
-            ['code' => 'DEMO-106', 'name' => 'Computer Networks', 'program' => $primaryProgram],
-            ['code' => 'DEMO-107', 'name' => 'Operating Systems', 'program' => $primaryProgram, 'lab' => LaboratoryType::ComputerLab],
-            ['code' => 'DEMO-108', 'name' => 'Software Engineering I', 'program' => $primaryProgram, 'bottleneck' => true],
-            ['code' => 'DEMO-109', 'name' => 'Web Development', 'program' => $primaryProgram, 'lab' => LaboratoryType::ComputerLab],
-            ['code' => 'DEMO-110', 'name' => 'Algorithms Analysis', 'program' => $primaryProgram],
-            ['code' => 'DEMO-111', 'name' => 'Applied Statistics', 'program' => $secondaryProgram],
-            ['code' => 'DEMO-112', 'name' => 'Cost Accounting', 'program' => $secondaryProgram],
-            ['code' => 'DEMO-201', 'name' => 'English I', 'program' => null, 'service' => true],
-            ['code' => 'DEMO-202', 'name' => 'English II', 'program' => null, 'service' => true],
-            ['code' => 'DEMO-203', 'name' => 'Ethics and Citizenship', 'program' => null, 'service' => true],
+            ['code' => 'DEMO-101', 'name' => 'Introducción a la Programación', 'program' => $primaryProgram],
+            ['code' => 'DEMO-102', 'name' => 'Matemática Discreta', 'program' => $primaryProgram],
+            ['code' => 'DEMO-103', 'name' => 'Estructuras de Datos', 'program' => $primaryProgram],
+            ['code' => 'DEMO-104', 'name' => 'Bases de Datos I', 'program' => $primaryProgram],
+            ['code' => 'DEMO-105', 'name' => 'Programación Orientada a Objetos', 'program' => $primaryProgram],
+            ['code' => 'DEMO-106', 'name' => 'Redes de Computadoras', 'program' => $primaryProgram],
+            ['code' => 'DEMO-107', 'name' => 'Sistemas Operativos', 'program' => $primaryProgram, 'lab' => LaboratoryType::ComputerLab],
+            ['code' => 'DEMO-108', 'name' => 'Ingeniería de Software I', 'program' => $primaryProgram, 'bottleneck' => true],
+            ['code' => 'DEMO-109', 'name' => 'Desarrollo Web', 'program' => $primaryProgram, 'lab' => LaboratoryType::ComputerLab],
+            ['code' => 'DEMO-110', 'name' => 'Análisis de Algoritmos', 'program' => $primaryProgram],
+            ['code' => 'DEMO-111', 'name' => 'Estadística Aplicada', 'program' => $secondaryProgram],
+            ['code' => 'DEMO-112', 'name' => 'Contabilidad de Costos', 'program' => $secondaryProgram],
+            ['code' => 'DEMO-201', 'name' => 'Inglés I', 'program' => null, 'service' => true],
+            ['code' => 'DEMO-202', 'name' => 'Inglés II', 'program' => null, 'service' => true],
+            ['code' => 'DEMO-203', 'name' => 'Ética y Ciudadanía', 'program' => null, 'service' => true],
         ];
 
         return array_map(function (array $definition): Course {

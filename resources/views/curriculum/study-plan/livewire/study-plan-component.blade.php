@@ -92,7 +92,7 @@
             <label for="planClassification">{{ __('Classification') }}</label>
             <select id="planClassification" wire:model.live="form.classification" class="{{ $errors->has('form.classification') ? 'has-error' : '' }}">
                 @foreach (\App\Enums\PlanClassification::cases() as $classification)
-                <option value="{{ $classification->value }}">{{ $classification->name }}</option>
+                <option value="{{ $classification->value }}">{{ __($classification->name) }}</option>
                 @endforeach
             </select>
             @error('form.classification') <span class="form-error">{{ $message }}</span> @enderror

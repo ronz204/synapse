@@ -67,7 +67,7 @@ it('RC-02b AC1 — saving an "old → new" equivalency accredits the new course 
     // "Acreditado por equiparación — Resolución [número]": the status carries
     // the label, the equivalency link carries the resolution number.
     expect($accreditation->status)->toBe(AcademicRecordStatus::AccreditedByEquivalency);
-    expect($accreditation->status->value)->toBe('Acreditado por equiparación');
+    expect($accreditation->status->value)->toBe('accredited_by_equivalency');
     expect($accreditation->equivalency_id)->toBe($equivalency->id);
     expect(Equivalency::query()->whereKey($accreditation->equivalency_id)->firstOrFail()->resolution_number)
         ->toBe('RC02B-001');

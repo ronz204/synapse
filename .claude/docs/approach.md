@@ -20,7 +20,7 @@ Each requirement below has explicit **acceptance criteria**. A requirement that 
 
 ### RC-01 — Study Plan Repository (Priority: High)
 
-**What it does:** Stores every study plan for every program: its levels, the courses within each level, prerequisite relationships between courses in the same plan, and the year it was implemented. Each plan is classified as **"Active" (Vigente)** or **"Terminal"**. Must support querying how many test students are active per plan/level.
+**What it does:** Stores every study plan for every program: its levels, the courses within each level, prerequisite relationships between courses in the same plan, and the year it was implemented. Each plan is classified as **"Active"** or **"Terminal"**. Must support querying how many test students are active per plan/level.
 
 **Inputs:**
 - Program, plan name, implementation year, classification (Active / Terminal).
@@ -54,7 +54,7 @@ Each requirement below has explicit **acceptance criteria**. A requirement that 
 
 The system must validate the graph:
 - **(a) Cycle detection:** reject any new equivalency that would form a directed cycle with existing ones — regardless of cycle length (not just 2-3 node cycles; must handle longer/complex chains).
-- **(b) Contradiction detection:** if two resolutions define contradictory outcomes for the same (source course, target course, direction) triple, block the save and require a human to explicitly mark which resolution prevails. The losing resolution gets tagged **"Superseded" (Sustituida)**.
+- **(b) Contradiction detection:** if two resolutions define contradictory outcomes for the same (source course, target course, direction) triple, block the save and require a human to explicitly mark which resolution prevails. The losing resolution gets tagged **"Superseded"**.
 
 **Inputs:**
 - Source course (old plan), target course (new plan).

@@ -8,7 +8,7 @@
                 <span class="card-title">{{ $studyPlan->name() }}</span>
                 <div style="margin-top: 4px;">
                     <span class="status-badge {{ $studyPlan->classification() === \App\Enums\PlanClassification::Terminal ? 'custom' : 'system' }}">
-                        {{ $studyPlan->classification()->name }}
+                        {{ __($studyPlan->classification()->name) }}
                     </span>
                     <span style="margin-left: 8px; color: var(--textMuted);">{{ $program?->name }} · {{ $studyPlan->implementationYear() }}</span>
                     @if ($studyPlan->classification() === \App\Enums\PlanClassification::Terminal)

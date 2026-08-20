@@ -158,7 +158,7 @@
             <select id="courseLabType" wire:model="form.laboratoryType" class="{{ $errors->has('form.laboratoryType') ? 'has-error' : '' }}">
                 <option value="">{{ __('Select a laboratory type...') }}</option>
                 @foreach ($laboratoryTypeOptions as $type)
-                <option value="{{ $type->value }}">{{ $type->value }}</option>
+                <option value="{{ $type->value }}">{{ __(Str::headline($type->name)) }}</option>
                 @endforeach
             </select>
             @error('form.laboratoryType') <span class="form-error">{{ $message }}</span> @enderror

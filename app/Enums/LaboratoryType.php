@@ -6,7 +6,7 @@ namespace App\Enums;
 
 enum LaboratoryType: string
 {
-    case ComputerLab = 'Laboratorio de cómputo';
-    case ScienceLab = 'Laboratorio de ciencias';
-    case LanguageLab = 'Laboratorio de idiomas';
+    case ComputerLab = 'computer_lab';
+    case ScienceLab = 'science_lab';
+    case LanguageLab = 'language_lab';
 }

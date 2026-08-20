@@ -16,6 +16,7 @@ use App\Models\Document;
 use App\Models\Equivalency;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Src\Curriculum\Equivalency\Application\DTOs\EquivalencyDTO;
 use Src\Curriculum\Equivalency\Application\UseCases\RegisterEquivalencyUseCase;
@@ -114,7 +115,7 @@ it('RC-02 AC2 — an equivalency saved with direction "old plan → new plan" is
     // both course codes in the listing.
     Livewire::actingAs($user)
         ->test(EquivalencyComponent::class)
-        ->assertSee(EquivalencyDirection::OldToNew->name)
+        ->assertSee(__(Str::headline(EquivalencyDirection::OldToNew->name)))
         ->assertSee('RC02-001')
         ->assertSee('RC02-OLD')
         ->assertSee('RC02-NEW');

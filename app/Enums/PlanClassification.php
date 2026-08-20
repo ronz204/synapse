@@ -6,6 +6,6 @@ namespace App\Enums;
 
 enum PlanClassification: string
 {
-    case Active = 'Vigente';
-    case Terminal = 'Terminal';
+    case Active = 'active';
+    case Terminal = 'terminal';
 }

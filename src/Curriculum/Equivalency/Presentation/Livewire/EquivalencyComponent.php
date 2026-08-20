@@ -277,9 +277,13 @@ class EquivalencyComponent extends Component
             // course referenced by an equivalency can never be missing.
             'sourceCourseCode' => $courses->get($equivalency->sourceCourseId())->code,
             'targetCourseCode' => $courses->get($equivalency->targetCourseId())->code,
-            'direction' => $equivalency->direction()->name,
+            // Translated here rather than left as the raw enum case name:
+            // this array feeds both the client-mode Alpine table (JSON, no
+            // Blade __() available) and the PDF/Excel export, so the
+            // translation has to happen once at the source, not per-view.
+            'direction' => __(Str::headline($equivalency->direction()->name)),
             'resolutionNumber' => $equivalency->resolutionNumber(),
-            'status' => $equivalency->status()->name,
+            'status' => __($equivalency->status()->name),
             'isActive' => $equivalency->isActive(),
             'supersededById' => $equivalency->supersededById(),
             // Surfaces which resolution actually prevailed, so a Superseded
