@@ -16,6 +16,7 @@ use App\Models\Document;
 use App\Models\Equivalency;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Src\Curriculum\Equivalency\Application\DTOs\EquivalencyDTO;
 use Src\Curriculum\Equivalency\Application\UseCases\RegisterEquivalencyUseCase;
@@ -94,7 +95,7 @@ it('RC-02 AC2 — an equivalency saved with direction "old plan → new plan" is
         ->set('form.document', rc02Pdf())
         ->call('register')
         ->assertHasNoErrors()
-        ->assertDispatched('toast', variant: 'success');
+        ->assertDispatched('toast-show', dataset: ['variant' => 'success']);
 
     $equivalency = Equivalency::query()->where('resolution_number', 'RC02-001')->firstOrFail();
 
@@ -114,7 +115,7 @@ it('RC-02 AC2 — an equivalency saved with direction "old plan → new plan" is
     // both course codes in the listing.
     Livewire::actingAs($user)
         ->test(EquivalencyComponent::class)
-        ->assertSee(EquivalencyDirection::OldToNew->name)
+        ->assertSee(__(Str::headline(EquivalencyDirection::OldToNew->name)))
         ->assertSee('RC02-001')
         ->assertSee('RC02-OLD')
         ->assertSee('RC02-NEW');
@@ -148,9 +149,9 @@ it('RC-02 AC3 — an equivalency that would close a directed cycle is rejected, 
         ->set('form.resolutionNumber', 'CYC-CANDIDATE')
         ->set('form.document', rc02Pdf())
         ->call('register')
-        ->assertDispatched('toast', function (string $event, array $params): bool {
-            return $params['variant'] === 'danger'
-                && str_contains($params['text'], 'CYC-A → CYC-B → CYC-C → CYC-D → CYC-E → CYC-A');
+        ->assertDispatched('toast-show', function (string $event, array $params): bool {
+            return $params['dataset']['variant'] === 'danger'
+                && str_contains($params['slots']['text'], 'CYC-A → CYC-B → CYC-C → CYC-D → CYC-E → CYC-A');
         });
 
     expect(Equivalency::query()->where('resolution_number', 'CYC-CANDIDATE')->exists())->toBeFalse();
@@ -204,7 +205,7 @@ it('RC-02 AC4 — designating the new resolution as prevailing tags the previous
         ->set('form.document', rc02Pdf())
         ->call('register')
         ->call('resolveContradiction', 'candidate')
-        ->assertDispatched('toast', variant: 'success');
+        ->assertDispatched('toast-show', dataset: ['variant' => 'success']);
 
     $candidate = Equivalency::query()->where('resolution_number', 'RC02-CANDIDATE')->firstOrFail();
 
@@ -233,7 +234,7 @@ it('RC-02 AC4 — designating the existing resolution as prevailing keeps the lo
         ->set('form.document', rc02Pdf())
         ->call('register')
         ->call('resolveContradiction', 'existing')
-        ->assertDispatched('toast', variant: 'success');
+        ->assertDispatched('toast-show', dataset: ['variant' => 'success']);
 
     $candidate = Equivalency::query()->where('resolution_number', 'RC02-CANDIDATE')->firstOrFail();
 

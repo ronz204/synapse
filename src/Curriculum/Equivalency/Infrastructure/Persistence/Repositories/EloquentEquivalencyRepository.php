@@ -106,7 +106,7 @@ final class EloquentEquivalencyRepository implements EquivalencyRepositoryInterf
         $result = DB::transaction(function () use ($equivalency, $document): Equivalency {
             // `status` is deliberately not fillable (see the model's own
             // docblock), so a plain create() would silently drop it from the
-            // INSERT itself and fall through to the DB's own Vigente
+            // INSERT itself and fall through to the DB's own active
             // default — a save() afterward would be one query too late,
             // since the row lands in the DB as Active either way. forceCreate()
             // bypasses that guard for this one write, the only place allowed

@@ -8,6 +8,7 @@ use App\Livewire\Concerns\InteractsWithDataTable;
 use App\Livewire\Concerns\InteractsWithExports;
 use App\Models\Course as CourseModel;
 use App\Models\Equivalency as EquivalencyModel;
+use Flux\Flux;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -88,7 +89,7 @@ class EquivalencyComponent extends Component
         try {
             $useCase->handle($this->form->toDto($document));
         } catch (CycleDetectedException $e) {
-            $this->dispatch('toast', variant: 'danger', text: __('Cannot save: this would close a cycle (:chain).', ['chain' => $e->chainLabel()]));
+            Flux::toast(variant: 'danger', text: __('Cannot save: this would close a cycle (:chain).', ['chain' => $e->chainLabel()]));
 
             return;
         } catch (EquivalencyContradictionException $e) {
@@ -104,7 +105,7 @@ class EquivalencyComponent extends Component
         $this->showModal = false;
         $this->conflictingEquivalencyId = null;
         $this->refreshTable($this->freshRows($listUseCase));
-        $this->dispatch('toast', variant: 'success', text: __('Equivalency registered.'));
+        Flux::toast(variant: 'success', text: __('Equivalency registered.'));
     }
 
     /**
@@ -141,7 +142,7 @@ class EquivalencyComponent extends Component
         $this->showModal = false;
         $this->conflictingEquivalencyId = null;
         $this->refreshTable($this->freshRows($listUseCase));
-        $this->dispatch('toast', variant: 'success', text: $winner === 'candidate'
+        Flux::toast(variant: 'success', text: $winner === 'candidate'
             ? __('New resolution registered; the previous one is now Superseded.')
             : __('Existing resolution kept; the new submission is now Superseded.'));
     }
@@ -277,9 +278,13 @@ class EquivalencyComponent extends Component
             // course referenced by an equivalency can never be missing.
             'sourceCourseCode' => $courses->get($equivalency->sourceCourseId())->code,
             'targetCourseCode' => $courses->get($equivalency->targetCourseId())->code,
-            'direction' => $equivalency->direction()->name,
+            // Translated here rather than left as the raw enum case name:
+            // this array feeds both the client-mode Alpine table (JSON, no
+            // Blade __() available) and the PDF/Excel export, so the
+            // translation has to happen once at the source, not per-view.
+            'direction' => __(Str::headline($equivalency->direction()->name)),
             'resolutionNumber' => $equivalency->resolutionNumber(),
-            'status' => $equivalency->status()->name,
+            'status' => __($equivalency->status()->name),
             'isActive' => $equivalency->isActive(),
             'supersededById' => $equivalency->supersededById(),
             // Surfaces which resolution actually prevailed, so a Superseded

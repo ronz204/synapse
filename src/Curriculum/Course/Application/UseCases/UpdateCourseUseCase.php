@@ -21,6 +21,7 @@ final class UpdateCourseUseCase
 
         Course::assertCodeIsAvailable($this->repository->codeExists($dto->code, excludeId: $id), $dto->code);
 
+        $course->changeCode($dto->code);
         $course->rename($dto->name);
         $course->updateAttributes(
             isService: $dto->isService,

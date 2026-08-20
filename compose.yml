@@ -1,7 +1,7 @@
 name: synapse
 
 services:
-  mysql:
+  synapse-mysql:
     image: mysql:oracle
     container_name: synapse-mysql
     restart: unless-stopped
@@ -14,6 +14,7 @@ services:
       - '${DB_PORT:-3306}:3306'
     volumes:
       - synapse-data:/var/lib/mysql
+      - ./bootstrap.sql:/docker-entrypoint-initdb.d/10-bootstrap.sql:ro
     networks:
       - synapse-network
     healthcheck:

@@ -95,7 +95,7 @@ it('rejects deleting a modality still referenced by a course with a specific mes
     Livewire::actingAs($user)
         ->test(ModalityComponent::class)
         ->call('delete', $modality->id)
-        ->assertDispatched('toast', variant: 'danger');
+        ->assertDispatched('toast-show', dataset: ['variant' => 'danger']);
 
     expect(Modality::query()->whereKey($modality->id)->exists())->toBeTrue();
 });
@@ -108,7 +108,7 @@ it('rejects deleting a modality still referenced by a historical resolution, not
     Livewire::actingAs($user)
         ->test(ModalityComponent::class)
         ->call('delete', $modality->id)
-        ->assertDispatched('toast', variant: 'danger');
+        ->assertDispatched('toast-show', dataset: ['variant' => 'danger']);
 
     expect(Modality::query()->whereKey($modality->id)->exists())->toBeTrue();
 });

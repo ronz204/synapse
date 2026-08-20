@@ -25,8 +25,8 @@
                 <span x-text="row.name"></span>
                 <span x-text="row.implementationYear"></span>
                 <span>
-                    <span class="status-badge custom" x-show="row.isTerminal">{{ __('Terminal') }}</span>
-                    <span class="status-badge system" x-show="!row.isTerminal">{{ __('Active') }}</span>
+                    <span class="status-badge muted" x-show="row.isTerminal">{{ __('Terminal') }}</span>
+                    <span class="status-badge custom" x-show="!row.isTerminal">{{ __('Active') }}</span>
                 </span>
                 <span x-text="row.enrollmentClosingDate ?? '—'"></span>
                 <div class="actions-cell">
@@ -45,9 +45,9 @@
             <span>{{ $plan->implementationYear() }}</span>
             <span>
                 @if ($plan->classification() === \App\Enums\PlanClassification::Terminal)
-                <span class="status-badge custom">{{ __('Terminal') }}</span>
+                <span class="status-badge muted">{{ __('Terminal') }}</span>
                 @else
-                <span class="status-badge system">{{ __('Active') }}</span>
+                <span class="status-badge custom">{{ __('Active') }}</span>
                 @endif
             </span>
             <span>{{ $plan->enrollmentClosingDate()?->format('Y-m-d') ?? '—' }}</span>
@@ -92,7 +92,7 @@
             <label for="planClassification">{{ __('Classification') }}</label>
             <select id="planClassification" wire:model.live="form.classification" class="{{ $errors->has('form.classification') ? 'has-error' : '' }}">
                 @foreach (\App\Enums\PlanClassification::cases() as $classification)
-                <option value="{{ $classification->value }}">{{ $classification->name }}</option>
+                <option value="{{ $classification->value }}">{{ __($classification->name) }}</option>
                 @endforeach
             </select>
             @error('form.classification') <span class="form-error">{{ $message }}</span> @enderror

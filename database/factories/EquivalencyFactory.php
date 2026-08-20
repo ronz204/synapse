@@ -24,7 +24,7 @@ class EquivalencyFactory extends Factory
             'target_course_id' => Course::factory(),
             'direction' => fake()->randomElement(EquivalencyDirection::cases()),
             'resolution_number' => 'R-'.fake()->unique()->numberBetween(1000, 9999),
-            // Explicit even though the column defaults to 'Vigente' in the DB:
+            // Explicit even though the column defaults to 'active' in the DB:
             // Eloquent doesn't re-read DB defaults after the insert, so without
             // this the in-memory attribute stays null despite the row being
             // correct.

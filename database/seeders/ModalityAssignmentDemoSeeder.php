@@ -17,7 +17,7 @@ use Illuminate\Support\Str;
  * DEMO-1xx courses CurriculumDemoSeeder already creates and the catalog
  * ModalitySeeder already inserts.
  *
- * Deliberately NOT called from DatabaseSeeder::run() — run it by hand,
+ * Called from DatabaseSeeder::run() after both. Can also be run standalone,
  * after both:
  *
  *   php artisan db:seed --class=CurriculumDemoSeeder

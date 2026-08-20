@@ -87,6 +87,16 @@ final class StudyPlan
         $this->name = $name;
     }
 
+    public function relocateToProgram(int $programId): void
+    {
+        $this->programId = $programId;
+    }
+
+    public function changeImplementationYear(int $implementationYear): void
+    {
+        $this->implementationYear = $implementationYear;
+    }
+
     public function reclassify(PlanClassification $classification, ?DateTimeImmutable $enrollmentClosingDate): void
     {
         $this->classification = $classification;

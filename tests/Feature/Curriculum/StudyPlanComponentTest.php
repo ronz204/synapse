@@ -68,6 +68,16 @@ it('blocks saving a Terminal plan with no enrollment closing date', function ():
     expect(StudyPlan::query()->where('name', 'Terminal Plan 2018')->exists())->toBeFalse();
 });
 
+it('blocks editing a plan for a user without study_plans.edit', function (): void {
+    $user = userWithPermissions(['study_plans.view']);
+    $plan = StudyPlan::factory()->create();
+
+    Livewire::actingAs($user)
+        ->test(StudyPlanComponent::class)
+        ->call('openEditModal', $plan->id)
+        ->assertForbidden();
+});
+
 it('creates a Terminal plan when a closing date is supplied', function (): void {
     $user = userWithPermissions(['study_plans.view', 'study_plans.create']);
     $program = Program::factory()->create();
@@ -94,6 +104,32 @@ it('displays a Terminal plan\'s enrollment closing date in the catalog', functio
     Livewire::actingAs($user)
         ->test(StudyPlanComponent::class)
         ->assertSee($plan->enrollment_closing_date->format('Y-m-d'));
+});
+
+it('persists every editable basic field when a plan is edited, including its program and year', function (): void {
+    $user = userWithPermissions(['study_plans.view', 'study_plans.create', 'study_plans.edit']);
+    $program = Program::factory()->create();
+    $otherProgram = Program::factory()->create();
+    $plan = StudyPlan::factory()->create([
+        'program_id' => $program->id,
+        'implementation_year' => 2018,
+        'classification' => PlanClassification::Active,
+    ]);
+
+    Livewire::actingAs($user)
+        ->test(StudyPlanComponent::class)
+        ->call('openEditModal', $plan->id)
+        ->set('form.programId', $otherProgram->id)
+        ->set('form.implementationYear', '2022')
+        ->set('form.name', 'Plan 2022 (relocated)')
+        ->call('save')
+        ->assertOk()
+        ->assertHasNoErrors();
+
+    $plan->refresh();
+    expect($plan->program_id)->toBe($otherProgram->id);
+    expect((int) $plan->implementation_year)->toBe(2022);
+    expect($plan->name)->toBe('Plan 2022 (relocated)');
 });
 
 it('shows a plan\'s full structure: levels, linked courses and prerequisites', function (): void {
@@ -138,7 +174,7 @@ it('blocks a prerequisite whose course is not linked to the plan', function (): 
             ['key' => "{$linkedCourse->id}-{$unlinkedCourse->id}", 'required_course_id' => $linkedCourse->id, 'dependent_course_id' => $unlinkedCourse->id],
         ])
         ->call('saveStructure')
-        ->assertDispatched('toast', variant: 'danger');
+        ->assertDispatched('toast-show', dataset: ['variant' => 'danger']);
 
     expect(Prerequisite::query()->where('study_plan_id', $plan->id)->count())->toBe(0);
 });
@@ -161,7 +197,7 @@ it('blocks a prerequisite where required and dependent are the same course', fun
             ['key' => "{$course->id}-{$course->id}", 'required_course_id' => $course->id, 'dependent_course_id' => $course->id],
         ])
         ->call('saveStructure')
-        ->assertDispatched('toast', variant: 'danger');
+        ->assertDispatched('toast-show', dataset: ['variant' => 'danger']);
 
     expect(Prerequisite::query()->where('study_plan_id', $plan->id)->count())->toBe(0);
 });
@@ -186,7 +222,7 @@ it('saves a valid structure end to end through the component', function (): void
             ['key' => "{$courseA->id}-{$courseB->id}", 'required_course_id' => $courseA->id, 'dependent_course_id' => $courseB->id],
         ])
         ->call('saveStructure')
-        ->assertDispatched('toast', variant: 'success');
+        ->assertDispatched('toast-show', dataset: ['variant' => 'success']);
 
     expect(Level::query()->where('study_plan_id', $plan->id)->count())->toBe(1);
     expect(Prerequisite::query()->where('study_plan_id', $plan->id)->count())->toBe(1);

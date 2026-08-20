@@ -75,7 +75,7 @@ it('registers an equivalency with the OldToNew direction and persists it exactly
         ->call('register')
         ->assertOk()
         ->assertHasNoErrors()
-        ->assertDispatched('toast', variant: 'success');
+        ->assertDispatched('toast-show', dataset: ['variant' => 'success']);
 
     $equivalency = Equivalency::query()->where('resolution_number', 'R-1')->firstOrFail();
 
@@ -107,7 +107,7 @@ it('rejects a new equivalency that would close a directed cycle spanning more th
         ->set('form.resolutionNumber', 'R-E-A')
         ->set('form.document', pdfUpload())
         ->call('register')
-        ->assertDispatched('toast', variant: 'danger');
+        ->assertDispatched('toast-show', dataset: ['variant' => 'danger']);
 
     expect(Equivalency::query()->where('resolution_number', 'R-E-A')->exists())->toBeFalse();
 });
@@ -133,7 +133,7 @@ it('does not let a Superseded equivalency block a new, otherwise-unrelated cycle
         ->call('register')
         ->assertOk()
         ->assertHasNoErrors()
-        ->assertDispatched('toast', variant: 'success');
+        ->assertDispatched('toast-show', dataset: ['variant' => 'success']);
 
     expect(Equivalency::query()->where('resolution_number', 'R-B-C')->exists())->toBeTrue();
 });
@@ -185,7 +185,7 @@ it('resolves a contradiction in favor of the candidate: existing becomes Superse
         ->call('register')
         ->call('resolveContradiction', 'candidate')
         ->assertOk()
-        ->assertDispatched('toast', variant: 'success');
+        ->assertDispatched('toast-show', dataset: ['variant' => 'success']);
 
     $existing->refresh();
     $candidate = Equivalency::query()->where('resolution_number', 'R-CANDIDATE')->firstOrFail();
@@ -216,7 +216,7 @@ it('resolves a contradiction in favor of the existing record: candidate is persi
         ->call('register')
         ->call('resolveContradiction', 'existing')
         ->assertOk()
-        ->assertDispatched('toast', variant: 'success');
+        ->assertDispatched('toast-show', dataset: ['variant' => 'success']);
 
     $existing->refresh();
     $candidate = Equivalency::query()->where('resolution_number', 'R-CANDIDATE')->firstOrFail();

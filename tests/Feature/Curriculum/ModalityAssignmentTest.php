@@ -49,7 +49,7 @@ it('rejects assigning a modality that requires a resolution when none is on file
         ->set('form.courseId', $course->id)
         ->set('form.modalityId', $modality->id)
         ->call('assign')
-        ->assertDispatched('toast', variant: 'danger', text: 'No valid modality resolution exists for this course.');
+        ->assertDispatched('toast-show', dataset: ['variant' => 'danger'], slots: ['text' => 'No valid modality resolution exists for this course.']);
 
     expect($course->fresh()->modality_id)->not->toBe($modality->id);
 });
@@ -88,7 +88,7 @@ it('files a currently-valid resolution and assigns the modality in the same subm
         ->call('assign')
         ->assertOk()
         ->assertHasNoErrors()
-        ->assertDispatched('toast', variant: 'success');
+        ->assertDispatched('toast-show', dataset: ['variant' => 'success']);
 
     expect($course->fresh()->modality_id)->toBe($modality->id);
 
@@ -114,7 +114,7 @@ it('assigns successfully by reusing a currently-valid resolution already on file
         ->call('assign')
         ->assertOk()
         ->assertHasNoErrors()
-        ->assertDispatched('toast', variant: 'success');
+        ->assertDispatched('toast-show', dataset: ['variant' => 'success']);
 
     expect($course->fresh()->modality_id)->toBe($modality->id);
 });
@@ -133,7 +133,7 @@ it('rejects assigning when the only resolution on file has already expired', fun
         ->set('form.courseId', $course->id)
         ->set('form.modalityId', $modality->id)
         ->call('assign')
-        ->assertDispatched('toast', variant: 'danger', text: 'No valid modality resolution exists for this course.');
+        ->assertDispatched('toast-show', dataset: ['variant' => 'danger'], slots: ['text' => 'No valid modality resolution exists for this course.']);
 
     expect($course->fresh()->modality_id)->not->toBe($modality->id);
 });

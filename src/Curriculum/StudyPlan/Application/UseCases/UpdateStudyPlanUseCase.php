@@ -25,6 +25,8 @@ final class UpdateStudyPlanUseCase
         $studyPlan = $this->repository->find($id) ?? throw StudyPlanNotFoundException::withId($id);
 
         $studyPlan->rename($dto->name);
+        $studyPlan->relocateToProgram($dto->programId);
+        $studyPlan->changeImplementationYear($dto->implementationYear);
         $studyPlan->reclassify($dto->classification, $dto->enrollmentClosingDate);
 
         return $this->repository->save($studyPlan);

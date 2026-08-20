@@ -115,7 +115,7 @@
             <select id="equivalencyDirection" wire:model="form.direction" class="{{ $errors->has('form.direction') ? 'has-error' : '' }}">
                 <option value="">{{ __('Select a direction...') }}</option>
                 @foreach (\App\Enums\EquivalencyDirection::cases() as $direction)
-                <option value="{{ $direction->value }}">{{ Str::headline($direction->name) }}</option>
+                <option value="{{ $direction->value }}">{{ __(Str::headline($direction->name)) }}</option>
                 @endforeach
             </select>
             @error('form.direction') <span class="form-error">{{ $message }}</span> @enderror
@@ -147,7 +147,7 @@
             <strong>{{ __('Existing resolution') }}</strong>
             <p>
                 {{ __('Resolution :number', ['number' => $conflictingEquivalency->resolutionNumber()]) }}
-                ({{ Str::headline($conflictingEquivalency->direction()->name) }})
+                ({{ __(Str::headline($conflictingEquivalency->direction()->name)) }})
             </p>
         </div>
 
@@ -155,7 +155,7 @@
             <strong>{{ __('New submission') }}</strong>
             <p>
                 {{ __('Resolution :number', ['number' => $form->resolutionNumber]) }}
-                ({{ $form->direction !== '' ? Str::headline(\App\Enums\EquivalencyDirection::from($form->direction)->name) : '' }})
+                ({{ $form->direction !== '' ? __(Str::headline(\App\Enums\EquivalencyDirection::from($form->direction)->name)) : '' }})
             </p>
         </div>
 

@@ -6,7 +6,7 @@ namespace App\Enums;
 
 enum EquivalencyDirection: string
 {
-    case OldToNew = 'Anterior a nuevo';
-    case NewToOld = 'Nuevo a anterior';
-    case Bidirectional = 'Bidireccional';
+    case OldToNew = 'old_to_new';
+    case NewToOld = 'new_to_old';
+    case Bidirectional = 'bidirectional';
 }

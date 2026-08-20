@@ -17,8 +17,8 @@ use Illuminate\Support\Str;
  * Fake demo data for RC-02 (Equivalency graph integrity), built on top of
  * the DEMO-1xx courses CurriculumDemoSeeder already creates.
  *
- * Deliberately NOT called from DatabaseSeeder::run() — run it by hand, after
- * CurriculumDemoSeeder:
+ * Called from DatabaseSeeder::run() after CurriculumDemoSeeder. Can also be
+ * run standalone, after CurriculumDemoSeeder:
  *
  *   php artisan db:seed --class=CurriculumDemoSeeder
  *   php artisan db:seed --class=EquivalencyDemoSeeder

@@ -27,7 +27,15 @@ class StudyPlanForm extends Form
 
     public string $implementationYear = '';
 
-    public string $classification = '';
+    /**
+     * Defaults to Active/Vigente, not ''. The <select> has no blank
+     * placeholder option (Classification is always one of two real values),
+     * so the browser visually shows the first <option> regardless of the
+     * bound value — if this stayed '', a user who never touches the
+     * dropdown would submit a value that looks selected but isn't, and get
+     * a spurious "required" error on a field that visibly has a value.
+     */
+    public string $classification = PlanClassification::Active->value;
 
     public ?string $enrollmentClosingDate = null;
 

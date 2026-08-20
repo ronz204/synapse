@@ -22,6 +22,9 @@ class DatabaseSeeder extends Seeder
             RoleSeeder::class,
             PermissionSeeder::class,
             PermissionRoleSeeder::class,
+            CurriculumDemoSeeder::class,
+            EquivalencyDemoSeeder::class,
+            ModalityAssignmentDemoSeeder::class,
         ]);
 
         // User::factory(10)->create();

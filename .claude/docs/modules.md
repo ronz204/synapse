@@ -22,7 +22,7 @@ RC-02 cannot be modeled without RC-01's courses existing first. RC-02b cannot ru
 
 ### Purpose
 
-Stores the structural definition of every study plan: its levels, the courses within each level, intra-plan prerequisites, and whether the plan is Active (Vigente) or Terminal.
+Stores the structural definition of every study plan: its levels, the courses within each level, intra-plan prerequisites, and whether the plan is Active or Terminal.
 
 ### Domain entities & data shape
 

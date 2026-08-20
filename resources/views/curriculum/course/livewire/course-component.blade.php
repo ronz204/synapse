@@ -46,8 +46,8 @@
                 </span>
                 <span x-text="row.modalityName ?? '{{ __('Default (Presencial)') }}'"></span>
                 <span>
-                    <span class="status-badge system" x-show="row.active">{{ __('Active') }}</span>
-                    <span class="status-badge custom" x-show="!row.active">{{ __('Inactive') }}</span>
+                    <span class="status-badge custom" x-show="row.active">{{ __('Active') }}</span>
+                    <span class="status-badge muted" x-show="!row.active">{{ __('Inactive') }}</span>
                 </span>
                 <div class="actions-cell">
                     <x-ui.row-actions
@@ -76,9 +76,9 @@
             <span>{{ $modalityNames[$course->modalityId()] ?? __('Default (Presencial)') }}</span>
             <span>
                 @if ($course->isActive())
-                <span class="status-badge system">{{ __('Active') }}</span>
+                <span class="status-badge custom">{{ __('Active') }}</span>
                 @else
-                <span class="status-badge custom">{{ __('Inactive') }}</span>
+                <span class="status-badge muted">{{ __('Inactive') }}</span>
                 @endif
             </span>
             <div class="actions-cell">
@@ -158,7 +158,7 @@
             <select id="courseLabType" wire:model="form.laboratoryType" class="{{ $errors->has('form.laboratoryType') ? 'has-error' : '' }}">
                 <option value="">{{ __('Select a laboratory type...') }}</option>
                 @foreach ($laboratoryTypeOptions as $type)
-                <option value="{{ $type->value }}">{{ $type->value }}</option>
+                <option value="{{ $type->value }}">{{ __(Str::headline($type->name)) }}</option>
                 @endforeach
             </select>
             @error('form.laboratoryType') <span class="form-error">{{ $message }}</span> @enderror

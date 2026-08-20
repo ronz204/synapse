@@ -50,9 +50,9 @@ it('RC-01 AC1 — selecting a plan displays its full structure (levels, courses,
         ->assertSee('RC1-101')
         ->assertSee('RC1-102')
         // Classification, shown next to the plan name.
-        ->assertSee(PlanClassification::Active->name)
+        ->assertSee(__(PlanClassification::Active->name))
         // Prerequisites section, listing the pair.
-        ->assertSee('Prerequisites');
+        ->assertSee(__('Prerequisites'));
 });
 
 it('RC-01 AC2 — a Terminal plan additionally shows its enrollment closing date', function (): void {
@@ -62,7 +62,7 @@ it('RC-01 AC2 — a Terminal plan additionally shows its enrollment closing date
     Livewire::actingAs($user)
         ->test(StudyPlanComponent::class)
         ->call('viewStructure', $plan->id)
-        ->assertSee(PlanClassification::Terminal->name)
+        ->assertSee(__(PlanClassification::Terminal->name))
         ->assertSee($plan->enrollment_closing_date->format('Y-m-d'));
 });
 
@@ -106,7 +106,7 @@ it('RC-01 AC3 — a prerequisite citing a course that does not exist in the plan
             ],
         ])
         ->call('saveStructure')
-        ->assertDispatched('toast', variant: 'danger');
+        ->assertDispatched('toast-show', dataset: ['variant' => 'danger']);
 
     // Blocked, not merely flagged: nothing at all was written for this plan.
     expect(Prerequisite::query()->where('study_plan_id', $plan->id)->count())->toBe(0);

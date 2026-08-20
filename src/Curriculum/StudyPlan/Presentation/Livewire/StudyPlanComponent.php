@@ -8,6 +8,7 @@ use App\Enums\PlanClassification;
 use App\Livewire\Concerns\InteractsWithDataTable;
 use App\Livewire\Concerns\InteractsWithExports;
 use App\Models\Program;
+use Flux\Flux;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -144,15 +145,19 @@ class StudyPlanComponent extends Component
                 $this->authorize('update', $findUseCase->handle($this->editingId));
                 $updateUseCase->handle($this->editingId, $this->form->toDto());
             }
-        } catch (TerminalPlanRequiresClosingDateException $e) {
-            $this->dispatch('toast', variant: 'danger', text: $e->getMessage());
+        } catch (TerminalPlanRequiresClosingDateException) {
+            // The domain exception's own message() stays English-only by
+            // design (the domain layer must not depend on Laravel's
+            // translator) — the presentation layer maps the exception type
+            // to a translated, user-facing message instead of relaying it.
+            Flux::toast(variant: 'danger', text: __('A study plan classified as Terminal must have an enrollment closing date.'));
 
             return;
         }
 
         $this->showModal = false;
         $this->refreshTable($this->freshRows($listUseCase));
-        $this->dispatch('toast', variant: 'success', text: $this->editingId === null
+        Flux::toast(variant: 'success', text: $this->editingId === null
             ? __('Study plan created.')
             : __('Study plan updated.'));
     }
@@ -262,7 +267,7 @@ class StudyPlanComponent extends Component
         $dependent = (int) $this->newPrerequisiteDependent;
 
         if ($required === $dependent) {
-            $this->dispatch('toast', variant: 'danger', text: __('A course cannot be a prerequisite of itself.'));
+            Flux::toast(variant: 'danger', text: __('A course cannot be a prerequisite of itself.'));
 
             return;
         }
@@ -314,14 +319,21 @@ class StudyPlanComponent extends Component
 
         try {
             $updated = $useCase->handle($this->viewingPlanId, new StudyPlanStructureDTO($levelDtos, $prerequisiteDtos));
-        } catch (PrerequisiteCourseNotLinkedToPlanException|PrerequisiteCoursesMustDifferException $e) {
-            $this->dispatch('toast', variant: 'danger', text: $e->getMessage());
+        } catch (PrerequisiteCourseNotLinkedToPlanException) {
+            // Same reasoning as the TerminalPlanRequiresClosingDateException
+            // catch above: the domain message stays English/framework-free,
+            // the presentation layer supplies the translated text.
+            Flux::toast(variant: 'danger', text: __('Both courses of a prerequisite must be linked to a level of this study plan.'));
+
+            return;
+        } catch (PrerequisiteCoursesMustDifferException) {
+            Flux::toast(variant: 'danger', text: __('A course cannot be a prerequisite of itself.'));
 
             return;
         }
 
         $this->loadStructureState($updated);
-        $this->dispatch('toast', variant: 'success', text: __('Study plan structure saved.'));
+        Flux::toast(variant: 'success', text: __('Study plan structure saved.'));
     }
 
     private function loadStructureState(StudyPlan $studyPlan): void
