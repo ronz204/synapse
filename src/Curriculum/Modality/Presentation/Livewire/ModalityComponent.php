@@ -6,6 +6,7 @@ namespace Src\Curriculum\Modality\Presentation\Livewire;
 
 use App\Livewire\Concerns\InteractsWithDataTable;
 use App\Livewire\Concerns\InteractsWithExports;
+use Flux\Flux;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -101,7 +102,7 @@ class ModalityComponent extends Component
 
         $this->showModal = false;
         $this->refreshTable($this->freshRows($listUseCase));
-        $this->dispatch('toast', variant: 'success', text: $this->editingId === null
+        Flux::toast(variant: 'success', text: $this->editingId === null
             ? __('Modality created.')
             : __('Modality updated.'));
     }
@@ -113,13 +114,13 @@ class ModalityComponent extends Component
         try {
             $useCase->handle($id);
         } catch (ModalityInUseException $e) {
-            $this->dispatch('toast', variant: 'danger', text: $e->getMessage());
+            Flux::toast(variant: 'danger', text: $e->getMessage());
 
             return;
         }
 
         $this->refreshTable($this->freshRows($listUseCase));
-        $this->dispatch('toast', variant: 'success', text: __('Modality deleted.'));
+        Flux::toast(variant: 'success', text: __('Modality deleted.'));
     }
 
     public function exportPdf(PdfExporterInterface $exporter, ListModalitiesUseCase $useCase, ?string $search = null): StreamedResponse

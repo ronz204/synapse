@@ -9,6 +9,7 @@ use App\Livewire\Concerns\InteractsWithExports;
 use App\Models\Course as CourseModel;
 use App\Models\Modality as ModalityModel;
 use App\Models\ModalityResolution as ModalityResolutionModel;
+use Flux\Flux;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Storage;
@@ -81,7 +82,7 @@ class ModalityAssignmentComponent extends Component
                 $this->form->toResolutionDto($document),
             );
         } catch (NoValidModalityResolutionException $e) {
-            $this->dispatch('toast', variant: 'danger', text: $e->getMessage());
+            Flux::toast(variant: 'danger', text: $e->getMessage());
 
             return;
         } catch (ModalityResolutionDocumentRequiredException $e) {
@@ -91,7 +92,7 @@ class ModalityAssignmentComponent extends Component
         }
 
         $this->showModal = false;
-        $this->dispatch('toast', variant: 'success', text: __('Modality assigned.'));
+        Flux::toast(variant: 'success', text: __('Modality assigned.'));
     }
 
     /**

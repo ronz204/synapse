@@ -6,6 +6,7 @@ namespace Src\IdentityAccess\Role\Presentation\Livewire;
 
 use App\Livewire\Concerns\InteractsWithDataTable;
 use App\Livewire\Concerns\InteractsWithExports;
+use Flux\Flux;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -99,14 +100,14 @@ class RoleComponent extends Component
                 $updateUseCase->handle($this->editingId, $this->form->toDto());
             }
         } catch (RoleIsProtectedException $e) {
-            $this->dispatch('toast', variant: 'danger', text: $e->getMessage());
+            Flux::toast(variant: 'danger', text: $e->getMessage());
 
             return;
         }
 
         $this->showModal = false;
         $this->refreshTable($this->freshRows($listUseCase));
-        $this->dispatch('toast', variant: 'success', text: $this->editingId === null
+        Flux::toast(variant: 'success', text: $this->editingId === null
             ? __('Role created.')
             : __('Role updated.'));
     }
@@ -118,13 +119,13 @@ class RoleComponent extends Component
         try {
             $useCase->handle($id);
         } catch (RoleIsProtectedException $e) {
-            $this->dispatch('toast', variant: 'danger', text: $e->getMessage());
+            Flux::toast(variant: 'danger', text: $e->getMessage());
 
             return;
         }
 
         $this->refreshTable($this->freshRows($listUseCase));
-        $this->dispatch('toast', variant: 'success', text: __('Role deleted.'));
+        Flux::toast(variant: 'success', text: __('Role deleted.'));
     }
 
     /**

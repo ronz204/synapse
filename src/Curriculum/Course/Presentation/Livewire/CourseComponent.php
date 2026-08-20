@@ -9,6 +9,7 @@ use App\Livewire\Concerns\InteractsWithDataTable;
 use App\Livewire\Concerns\InteractsWithExports;
 use App\Models\Modality as ModalityModel;
 use App\Models\Program;
+use Flux\Flux;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -106,7 +107,7 @@ class CourseComponent extends Component
 
         $this->showModal = false;
         $this->refreshTable($this->freshRows($listUseCase));
-        $this->dispatch('toast', variant: 'success', text: $this->editingId === null
+        Flux::toast(variant: 'success', text: $this->editingId === null
             ? __('Course created.')
             : __('Course updated.'));
     }
@@ -129,7 +130,7 @@ class CourseComponent extends Component
         $useCase->handle($id);
 
         $this->refreshTable($this->freshRows($listUseCase));
-        $this->dispatch('toast', variant: 'success', text: __('Course deactivated.'));
+        Flux::toast(variant: 'success', text: __('Course deactivated.'));
     }
 
     public function exportPdf(PdfExporterInterface $exporter, ListCoursesUseCase $useCase, ?string $search = null): StreamedResponse

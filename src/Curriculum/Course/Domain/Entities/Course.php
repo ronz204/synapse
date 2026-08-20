@@ -90,6 +90,16 @@ final class Course
         $this->name = $name;
     }
 
+    /**
+     * The caller (a use case) is responsible for asking
+     * CourseRepositoryInterface::codeExists() first — same division of
+     * responsibility as assertCodeIsAvailable().
+     */
+    public function changeCode(string $code): void
+    {
+        $this->code = $code;
+    }
+
     public function updateAttributes(
         bool $isService,
         ?int $programId,

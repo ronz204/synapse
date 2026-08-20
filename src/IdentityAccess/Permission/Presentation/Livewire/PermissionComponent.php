@@ -6,6 +6,7 @@ namespace Src\IdentityAccess\Permission\Presentation\Livewire;
 
 use App\Livewire\Concerns\InteractsWithDataTable;
 use App\Livewire\Concerns\InteractsWithExports;
+use Flux\Flux;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -89,7 +90,7 @@ class PermissionComponent extends Component
 
         $this->showModal = false;
         $this->refreshTable($this->freshRows($listUseCase));
-        $this->dispatch('toast', variant: 'success', text: $this->editingId === null
+        Flux::toast(variant: 'success', text: $this->editingId === null
             ? __('Permission created.')
             : __('Permission updated.'));
     }
@@ -101,7 +102,7 @@ class PermissionComponent extends Component
         $useCase->handle($id);
 
         $this->refreshTable($this->freshRows($listUseCase));
-        $this->dispatch('toast', variant: 'success', text: __('Permission deleted.'));
+        Flux::toast(variant: 'success', text: __('Permission deleted.'));
     }
 
     /**

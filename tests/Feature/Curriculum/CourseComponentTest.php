@@ -42,6 +42,17 @@ it('creates a course for a user holding courses.create', function (): void {
     expect(Course::query()->where('code', 'INF-101')->exists())->toBeTrue();
 });
 
+it('blocks editing a course for a user without courses.edit', function (): void {
+    $user = userWithPermissions(['courses.view']);
+    $program = Program::factory()->create();
+    $course = Course::factory()->create(['program_id' => $program->id]);
+
+    Livewire::actingAs($user)
+        ->test(CourseComponent::class)
+        ->call('openEditModal', $course->id)
+        ->assertForbidden();
+});
+
 it('blocks saving a non-service course with no program', function (): void {
     $user = userWithPermissions(['courses.view', 'courses.create']);
 
@@ -128,6 +139,32 @@ it('deactivates rather than deletes a course row', function (): void {
 
     expect(Course::query()->whereKey($course->id)->exists())->toBeTrue();
     expect($course->fresh()->active)->toBeFalse();
+});
+
+it('persists every editable field when a course is edited, including its code', function (): void {
+    $user = userWithPermissions(['courses.view', 'courses.create', 'courses.edit']);
+    $program = Program::factory()->create();
+    $otherProgram = Program::factory()->create();
+    $course = Course::factory()->create([
+        'program_id' => $program->id,
+        'code' => 'INF-104',
+        'is_bottleneck' => false,
+    ]);
+
+    Livewire::actingAs($user)
+        ->test(CourseComponent::class)
+        ->call('openEditModal', $course->id)
+        ->set('form.code', 'INF-104-B')
+        ->set('form.programId', $otherProgram->id)
+        ->set('form.isBottleneck', true)
+        ->call('save')
+        ->assertOk()
+        ->assertHasNoErrors();
+
+    $course->refresh();
+    expect($course->code)->toBe('INF-104-B');
+    expect($course->program_id)->toBe($otherProgram->id);
+    expect($course->is_bottleneck)->toBeTrue();
 });
 
 it('never changes a course\'s modality through the edit modal (RC-03 gate cannot be bypassed via courses.edit)', function (): void {

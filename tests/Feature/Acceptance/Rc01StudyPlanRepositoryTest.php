@@ -106,7 +106,7 @@ it('RC-01 AC3 — a prerequisite citing a course that does not exist in the plan
             ],
         ])
         ->call('saveStructure')
-        ->assertDispatched('toast', variant: 'danger');
+        ->assertDispatched('toast-show', dataset: ['variant' => 'danger']);
 
     // Blocked, not merely flagged: nothing at all was written for this plan.
     expect(Prerequisite::query()->where('study_plan_id', $plan->id)->count())->toBe(0);
