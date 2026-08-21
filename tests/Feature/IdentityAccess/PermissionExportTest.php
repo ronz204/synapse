@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Src\IdentityAccess\Permission\Presentation\Livewire\PermissionComponent;
@@ -72,16 +73,24 @@ it('narrows the permissions export to the search term applied on screen', functi
     expect($names)->not->toContain('permissions.view');
 });
 
-it('asks the PDF port for a letter-sized permissions report', function (): void {
+it('queues a PDF export that asks the PDF port for a letter-sized permissions report, ready to download', function (): void {
+    Storage::fake('local');
     $user = userWithPermissions(['permissions.view', 'permissions.export_pdf']);
     $spy = fakePdfExporter();
 
-    Livewire::actingAs($user)
+    $component = Livewire::actingAs($user)
         ->test(PermissionComponent::class)
         ->call('exportPdf')
         ->assertOk();
 
-    expect($spy->filename)->toBe(Str::slug(__('Permissions')).'.pdf');
+    // QUEUE_CONNECTION=sync in tests (phpunit.xml), so the job already ran
+    // and Cache already holds 'ready' — checkPdfExportStatus() is what a
+    // real poll tick would call to pull that into the component's own state.
+    $component->call('checkPdfExportStatus');
+    expect($component->get('pdfExportStatus'))->toBe('ready');
+    expect($component->get('pdfExportFilename'))->toBe(Str::slug(__('Permissions')).'.pdf');
     expect($spy->paperSize)->toBe('letter');
     expect($spy->html)->toContain(__('Report of :title', ['title' => __('Permissions')]));
+
+    $component->call('downloadQueuedPdf')->assertOk();
 });

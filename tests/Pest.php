@@ -93,17 +93,14 @@ function fakePdfExporter(): object
     {
         public ?string $html = null;
 
-        public ?string $filename = null;
-
         public ?string $paperSize = null;
 
-        public function fromHtml(string $html, string $filename, string $paperSize = 'a4'): StreamedResponse
+        public function toBytes(string $html, string $paperSize = 'a4'): string
         {
             $this->html = $html;
-            $this->filename = $filename;
             $this->paperSize = $paperSize;
 
-            return new StreamedResponse(fn () => print ('pdf'));
+            return 'fake-pdf-bytes';
         }
     };
 

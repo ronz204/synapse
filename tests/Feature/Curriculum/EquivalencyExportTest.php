@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\Equivalency;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Src\Curriculum\Equivalency\Presentation\Livewire\EquivalencyComponent;
@@ -32,6 +33,7 @@ it('blocks an Excel export when the user lacks the equivalencies.export_excel pe
 });
 
 it('having equivalencies.export_pdf does not grant the Excel export', function (): void {
+    Storage::fake('local');
     $user = userWithPermissions(['equivalencies.view', 'equivalencies.export_pdf']);
     fakePdfExporter();
 
@@ -104,18 +106,26 @@ it('exports the whole catalog when no search term is applied', function (): void
     expect(array_column($spy->rows, __('Resolution number')))->toContain('R-1001', 'R-1002');
 });
 
-it('hands the PDF port letter-sized HTML carrying the report title and rows', function (): void {
+it('queues a PDF export that renders letter-sized HTML carrying the report title and rows, ready to download', function (): void {
+    Storage::fake('local');
     $user = userWithPermissions(['equivalencies.view', 'equivalencies.export_pdf']);
     Equivalency::factory()->create(['resolution_number' => 'R-1001']);
     $spy = fakePdfExporter();
 
-    Livewire::actingAs($user)
+    $component = Livewire::actingAs($user)
         ->test(EquivalencyComponent::class)
         ->call('exportPdf')
         ->assertOk();
 
-    expect($spy->filename)->toBe(Str::slug(__('Equivalencies')).'.pdf');
+    // QUEUE_CONNECTION=sync in tests (phpunit.xml), so the job already ran
+    // and Cache already holds 'ready' — checkPdfExportStatus() is what a
+    // real poll tick would call to pull that into the component's own state.
+    $component->call('checkPdfExportStatus');
+    expect($component->get('pdfExportStatus'))->toBe('ready');
+    expect($component->get('pdfExportFilename'))->toBe(Str::slug(__('Equivalencies')).'.pdf');
     expect($spy->paperSize)->toBe('letter');
     expect($spy->html)->toContain(__('Report of :title', ['title' => __('Equivalencies')]));
     expect($spy->html)->toContain('R-1001');
+
+    $component->call('downloadQueuedPdf')->assertOk();
 });

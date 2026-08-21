@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\Role;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Src\IdentityAccess\Role\Presentation\Livewire\RoleComponent;
@@ -32,6 +33,7 @@ it('blocks an Excel export when the user lacks the export_excel permission', fun
 });
 
 it('having export_pdf does not grant the Excel export', function (): void {
+    Storage::fake('local');
     $user = userWithPermissions(['roles.view', 'roles.export_pdf']);
     fakePdfExporter();
 
@@ -107,22 +109,30 @@ it('exports the whole catalog when no search term is applied', function (): void
     expect(array_column($spy->rows, __('Name')))->toContain('Coordinator', 'Registrar');
 });
 
-it('hands the PDF port letter-sized HTML carrying the report title and rows', function (): void {
+it('queues a PDF export that renders letter-sized HTML carrying the report title and rows, ready to download', function (): void {
+    Storage::fake('local');
     $user = userWithPermissions(['roles.view', 'roles.export_pdf']);
     Role::factory()->create(['name' => 'Coordinator']);
     $spy = fakePdfExporter();
 
-    Livewire::actingAs($user)
+    $component = Livewire::actingAs($user)
         ->test(RoleComponent::class)
         ->call('exportPdf')
         ->assertOk();
 
-    expect($spy->filename)->toBe(Str::slug(__('Roles')).'.pdf');
+    // QUEUE_CONNECTION=sync in tests (phpunit.xml), so the job already ran
+    // and Cache already holds 'ready' — checkPdfExportStatus() is what a
+    // real poll tick would call to pull that into the component's own state.
+    $component->call('checkPdfExportStatus');
+    expect($component->get('pdfExportStatus'))->toBe('ready');
+    expect($component->get('pdfExportFilename'))->toBe(Str::slug(__('Roles')).'.pdf');
     // The template's own @page rule is built for US Letter, so the component
     // has to ask for that size rather than the port's a4 default.
     expect($spy->paperSize)->toBe('letter');
     expect($spy->html)->toContain(__('Report of :title', ['title' => __('Roles')]));
     expect($spy->html)->toContain('Coordinator');
+
+    $component->call('downloadQueuedPdf')->assertOk();
 });
 
 it('renders the PDF template standalone, without the asset pipeline', function (): void {

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\Modality;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Src\Curriculum\Modality\Presentation\Livewire\ModalityComponent;
@@ -32,6 +33,7 @@ it('blocks an Excel export when the user lacks the modalities.export_excel permi
 });
 
 it('having modalities.export_pdf does not grant the Excel export', function (): void {
+    Storage::fake('local');
     $user = userWithPermissions(['modalities.view', 'modalities.export_pdf']);
     fakePdfExporter();
 
@@ -104,18 +106,26 @@ it('exports the whole catalog when no search term is applied', function (): void
     expect(array_column($spy->rows, __('Name')))->toContain('Presencial', 'Virtual');
 });
 
-it('hands the PDF port letter-sized HTML carrying the report title and rows', function (): void {
+it('queues a PDF export that renders letter-sized HTML carrying the report title and rows, ready to download', function (): void {
+    Storage::fake('local');
     $user = userWithPermissions(['modalities.view', 'modalities.export_pdf']);
     Modality::factory()->create(['name' => 'Presencial']);
     $spy = fakePdfExporter();
 
-    Livewire::actingAs($user)
+    $component = Livewire::actingAs($user)
         ->test(ModalityComponent::class)
         ->call('exportPdf')
         ->assertOk();
 
-    expect($spy->filename)->toBe(Str::slug(__('Modalities')).'.pdf');
+    // QUEUE_CONNECTION=sync in tests (phpunit.xml), so the job already ran
+    // and Cache already holds 'ready' — checkPdfExportStatus() is what a
+    // real poll tick would call to pull that into the component's own state.
+    $component->call('checkPdfExportStatus');
+    expect($component->get('pdfExportStatus'))->toBe('ready');
+    expect($component->get('pdfExportFilename'))->toBe(Str::slug(__('Modalities')).'.pdf');
     expect($spy->paperSize)->toBe('letter');
     expect($spy->html)->toContain(__('Report of :title', ['title' => __('Modalities')]));
     expect($spy->html)->toContain('Presencial');
+
+    $component->call('downloadQueuedPdf')->assertOk();
 });

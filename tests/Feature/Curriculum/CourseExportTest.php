@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\Course;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Src\Curriculum\Course\Presentation\Livewire\CourseComponent;
@@ -32,6 +33,7 @@ it('blocks an Excel export when the user lacks the courses.export_excel permissi
 });
 
 it('having courses.export_pdf does not grant the Excel export', function (): void {
+    Storage::fake('local');
     $user = userWithPermissions(['courses.view', 'courses.export_pdf']);
     fakePdfExporter();
 
@@ -52,7 +54,8 @@ it('exports every course to Excel with the on-screen column labels', function ()
     Livewire::actingAs($user)
         ->test(CourseComponent::class)
         ->call('exportExcel')
-        ->assertOk();
+        ->assertOk()
+        ->assertDispatched('toast', variant: 'success', text: __('Your Excel export is ready to download.'));
 
     expect($spy->filename)->toBe(Str::slug(__('Courses')).'.xlsx');
     expect(array_keys($spy->rows[0]))->toBe([__('Code'), __('Name'), __('Service course'), __('Modality'), __('Status')]);
@@ -105,18 +108,26 @@ it('exports the whole catalog when no search term is applied', function (): void
     expect(array_column($spy->rows, __('Code')))->toContain('DEMO-201', 'DEMO-202');
 });
 
-it('hands the PDF port letter-sized HTML carrying the report title and rows', function (): void {
+it('queues a PDF export that renders letter-sized HTML carrying the report title and rows, ready to download', function (): void {
+    Storage::fake('local');
     $user = userWithPermissions(['courses.view', 'courses.export_pdf']);
     Course::factory()->create(['code' => 'DEMO-201', 'name' => 'Compilers']);
     $spy = fakePdfExporter();
 
-    Livewire::actingAs($user)
+    $component = Livewire::actingAs($user)
         ->test(CourseComponent::class)
         ->call('exportPdf')
         ->assertOk();
 
-    expect($spy->filename)->toBe(Str::slug(__('Courses')).'.pdf');
+    // QUEUE_CONNECTION=sync in tests (phpunit.xml), so the job already ran
+    // and Cache already holds 'ready' — checkPdfExportStatus() is what a
+    // real poll tick would call to pull that into the component's own state.
+    $component->call('checkPdfExportStatus');
+    expect($component->get('pdfExportStatus'))->toBe('ready');
+    expect($component->get('pdfExportFilename'))->toBe(Str::slug(__('Courses')).'.pdf');
     expect($spy->paperSize)->toBe('letter');
     expect($spy->html)->toContain(__('Report of :title', ['title' => __('Courses')]));
     expect($spy->html)->toContain('Compilers');
+
+    $component->call('downloadQueuedPdf')->assertOk();
 });

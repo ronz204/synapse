@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\StudyPlan;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Src\Curriculum\StudyPlan\Presentation\Livewire\StudyPlanComponent;
@@ -32,6 +33,7 @@ it('blocks an Excel export when the user lacks the study_plans.export_excel perm
 });
 
 it('having study_plans.export_pdf does not grant the Excel export', function (): void {
+    Storage::fake('local');
     $user = userWithPermissions(['study_plans.view', 'study_plans.export_pdf']);
     fakePdfExporter();
 
@@ -107,18 +109,26 @@ it('exports the whole catalog when no search term is applied', function (): void
     expect(array_column($spy->rows, __('Name')))->toContain('Plan 2020', 'Plan 2024');
 });
 
-it('hands the PDF port letter-sized HTML carrying the report title and rows', function (): void {
+it('queues a PDF export that renders letter-sized HTML carrying the report title and rows, ready to download', function (): void {
+    Storage::fake('local');
     $user = userWithPermissions(['study_plans.view', 'study_plans.export_pdf']);
     StudyPlan::factory()->create(['name' => 'Plan 2020']);
     $spy = fakePdfExporter();
 
-    Livewire::actingAs($user)
+    $component = Livewire::actingAs($user)
         ->test(StudyPlanComponent::class)
         ->call('exportPdf')
         ->assertOk();
 
-    expect($spy->filename)->toBe(Str::slug(__('Study Plans')).'.pdf');
+    // QUEUE_CONNECTION=sync in tests (phpunit.xml), so the job already ran
+    // and Cache already holds 'ready' — checkPdfExportStatus() is what a
+    // real poll tick would call to pull that into the component's own state.
+    $component->call('checkPdfExportStatus');
+    expect($component->get('pdfExportStatus'))->toBe('ready');
+    expect($component->get('pdfExportFilename'))->toBe(Str::slug(__('Study Plans')).'.pdf');
     expect($spy->paperSize)->toBe('letter');
     expect($spy->html)->toContain(__('Report of :title', ['title' => __('Study Plans')]));
     expect($spy->html)->toContain('Plan 2020');
+
+    $component->call('downloadQueuedPdf')->assertOk();
 });
