@@ -6,9 +6,10 @@
                 ['key' => 'modalityName', 'label' => __('Modality'), 'sortable' => false],
                 ['key' => 'resolutionWindow', 'label' => __('Backing resolution'), 'sortable' => false],
             ]"
-        mode="client"
-        :rows="$rows"
+        :mode="$tableMode"
+        :rows="$rows ?? []"
         :searchable="['code', 'name']"
+        :paginator="$assignments ?? null"
         :sort-key="$sortKey"
         :sort-dir="$sortDir"
         :per-page="$perPage"
@@ -19,6 +20,9 @@
         :can-export-excel="Auth::user()->can('exportExcel', \Src\Curriculum\Modality\Domain\Entities\ModalityResolution::class)"
         :title="__('Course modality assignments')">
 
+        @if ($tableMode === 'client')
+        {{-- Client mode: Alpine renders rows from the in-browser `pageRows`
+                     collection. See resources/js/data-table.js. --}}
         <template x-for="row in pageRows" :key="row.id">
             <div class="data-row" role="row">
                 <span class="font-mono text-xs" x-text="row.code"></span>
@@ -44,17 +48,48 @@
             </div>
         </template>
         <div class="empty-row" x-show="pageRows.length === 0">{{ __('No records found') }}</div>
+        @else
+        {{-- Server mode: unchanged Livewire-driven pagination. --}}
+        @forelse ($assignments as $assignment)
+        <div class="data-row" role="row">
+            <span class="font-mono text-xs">{{ $assignment['code'] }}</span>
+            <span>{{ $assignment['name'] }}</span>
+            <span>{{ $assignment['modalityName'] ?? __('Default (Presencial)') }}</span>
+            <span>
+                @if ($assignment['resolutionNumber'])
+                <a href="#" wire:click.prevent="downloadDocument({{ $assignment['resolutionId'] }})">{{ $assignment['resolutionNumber'] }}</a>
+                <span>({{ $assignment['validFrom'] }}{{ $assignment['validTo'] ? ' → '.$assignment['validTo'] : ' → '.__('no end date') }})</span>
+                @if ($assignment['isCurrentlyValid'])
+                <span class="status-badge system">{{ __('Valid') }}</span>
+                @else
+                <span class="status-badge custom">{{ __('Expired') }}</span>
+                @endif
+                @elseif ($assignment['requiresResolution'])
+                <span class="status-badge custom">{{ __('None on file') }}</span>
+                @else
+                <span>&mdash;</span>
+                @endif
+            </span>
+            <div class="actions-cell"></div>
+        </div>
+        @empty
+        <div class="empty-row">{{ __('No records found') }}</div>
+        @endforelse
+        @endif
     </x-ui.data-table>
+
+    <x-ui.pdf-export-status :id="$pdfExportId" :status="$pdfExportStatus" />
 
     <x-ui.modal :show="$showModal" :title="__('Assign modality to course')">
         <div class="form-field">
             <label for="assignmentCourse">{{ __('Course') }}</label>
-            <select id="assignmentCourse" wire:model="form.courseId" class="{{ $errors->has('form.courseId') ? 'has-error' : '' }}">
-                <option value="">{{ __('Select a course...') }}</option>
-                @foreach ($courseOptions as $course)
-                <option value="{{ $course['id'] }}">{{ $course['code'] }} — {{ $course['name'] }}</option>
-                @endforeach
-            </select>
+            <x-ui.course-combobox
+                id="assignmentCourse"
+                search-property="courseSearch"
+                select-action="selectCourse"
+                :options="$courseOptions"
+                :has-error="$errors->has('form.courseId')"
+            />
             @error('form.courseId') <span class="form-error">{{ $message }}</span> @enderror
         </div>
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Src\Curriculum\Equivalency\Presentation\Livewire;
 
+use App\Livewire\Concerns\InteractsWithCourseSearch;
 use App\Livewire\Concerns\InteractsWithDataTable;
 use App\Livewire\Concerns\InteractsWithExports;
 use App\Models\Course as CourseModel;
@@ -29,20 +30,32 @@ use Src\Curriculum\Equivalency\Domain\Exceptions\EquivalencyDocumentRequiredExce
 use Src\Curriculum\Equivalency\Presentation\Livewire\Forms\EquivalencyForm;
 use Src\Shared\Document\Contracts\AttachableDocument;
 use Src\Shared\Export\Contracts\ExcelExporterInterface;
-use Src\Shared\Export\Contracts\PdfExporterInterface;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 #[Layout('layouts.dashboard', ['title' => 'Equivalencies', 'subtitle' => 'Cross-plan course equivalencies and their integrity checks'])]
 class EquivalencyComponent extends Component
 {
     use AuthorizesRequests;
+    use InteractsWithCourseSearch;
     use InteractsWithDataTable;
     use InteractsWithExports;
     use WithFileUploads;
 
-    protected string $tableMode = 'client';
+    protected string $tableMode = 'server';
 
     public bool $showModal = false;
+
+    /**
+     * Text typed into the source/target course pickers — drives
+     * <x-ui.course-combobox>'s search, re-narrowed on every keystroke via
+     * searchActiveCourses() rather than filtering a full course list
+     * client-side. Set to "CODE — Name" once a course is picked (see
+     * selectSourceCourse()/selectTargetCourse()) so the input reflects the
+     * current selection instead of going blank.
+     */
+    public string $sourceCourseSearch = '';
+
+    public string $targetCourseSearch = '';
 
     public EquivalencyForm $form;
 
@@ -68,9 +81,23 @@ class EquivalencyComponent extends Component
         $this->authorize('create', Equivalency::class);
 
         $this->form->reset();
+        $this->sourceCourseSearch = '';
+        $this->targetCourseSearch = '';
         $this->conflictingEquivalencyId = null;
         $this->resetValidation();
         $this->showModal = true;
+    }
+
+    public function selectSourceCourse(int $courseId, string $code, string $name): void
+    {
+        $this->form->sourceCourseId = $courseId;
+        $this->sourceCourseSearch = "{$code} — {$name}";
+    }
+
+    public function selectTargetCourse(int $courseId, string $code, string $name): void
+    {
+        $this->form->targetCourseId = $courseId;
+        $this->targetCourseSearch = "{$code} — {$name}";
     }
 
     public function closeModal(): void
@@ -189,16 +216,15 @@ class EquivalencyComponent extends Component
         );
     }
 
-    public function exportPdf(PdfExporterInterface $exporter, ListEquivalenciesUseCase $useCase, ?string $search = null): StreamedResponse
+    public function exportPdf(ListEquivalenciesUseCase $useCase, ?string $search = null): void
     {
         $this->authorize('exportPdf', Equivalency::class);
 
-        return $this->streamPdf(
+        $this->queuePdfExport(
             __('Equivalencies'),
             $this->exportHeaders(),
             $this->exportableRows($useCase, $search),
             Str::slug(__('Equivalencies')).'.pdf',
-            $exporter,
             paperSize: 'letter',
         );
     }
@@ -222,7 +248,8 @@ class EquivalencyComponent extends Component
             : $this->renderClientMode($useCase);
 
         return $view
-            ->with('courseOptions', $this->courseOptions())
+            ->with('sourceCourseOptions', $this->searchActiveCourses($this->sourceCourseSearch))
+            ->with('targetCourseOptions', $this->searchActiveCourses($this->targetCourseSearch))
             ->with('conflictingEquivalency', $this->conflictingEquivalencyId !== null ? $findUseCase->handle($this->conflictingEquivalencyId) : null);
     }
 
@@ -245,7 +272,7 @@ class EquivalencyComponent extends Component
         );
 
         $paginator = new LengthAwarePaginator(
-            items: $result['items'],
+            items: $this->rowsFor($result['items']),
             total: $result['total'],
             perPage: $this->perPage,
             currentPage: $this->page,
@@ -258,26 +285,25 @@ class EquivalencyComponent extends Component
     }
 
     /**
-     * Plain-array projection handed to Alpine as JSON — keeps the Domain
-     * Entity from ever leaking past the Presentation boundary. Course codes
-     * are a deliberate cross-aggregate read at this layer, same pragmatic
-     * coupling StudyPlanComponent::courseOptions() already uses.
+     * Plain-array projection handed to Alpine (client mode) or the
+     * server-mode Blade branch alike — keeps the Domain Entity from ever
+     * leaking past the Presentation boundary. Course codes and the
+     * superseding resolution's number are resolved once for the whole
+     * batch by the caller ($courseCodes/$supersededNumbers), never queried
+     * per row — see rowsFor().
      *
+     * @param  array<int, string>  $courseCodes  courseId => code
+     * @param  array<int, string>  $supersededNumbers  equivalencyId => resolution_number
      * @return array<string, mixed>
      */
-    private function toRow(Equivalency $equivalency): array
+    private function toRow(Equivalency $equivalency, array $courseCodes, array $supersededNumbers): array
     {
-        $courses = CourseModel::query()
-            ->whereIn('id', [$equivalency->sourceCourseId(), $equivalency->targetCourseId()])
-            ->get(['id', 'code'])
-            ->keyBy('id');
-
         return [
             'id' => $equivalency->id(),
             // Both ids always resolve: the FK is restrictOnDelete, so a
             // course referenced by an equivalency can never be missing.
-            'sourceCourseCode' => $courses->get($equivalency->sourceCourseId())->code,
-            'targetCourseCode' => $courses->get($equivalency->targetCourseId())->code,
+            'sourceCourseCode' => $courseCodes[$equivalency->sourceCourseId()],
+            'targetCourseCode' => $courseCodes[$equivalency->targetCourseId()],
             // Translated here rather than left as the raw enum case name:
             // this array feeds both the client-mode Alpine table (JSON, no
             // Blade __() available) and the PDF/Excel export, so the
@@ -290,9 +316,47 @@ class EquivalencyComponent extends Component
             // Surfaces which resolution actually prevailed, so a Superseded
             // row reads as an auditable trail instead of a dead end.
             'supersededByResolutionNumber' => $equivalency->supersededById() !== null
-                ? EquivalencyModel::query()->find($equivalency->supersededById())?->resolution_number
+                ? ($supersededNumbers[$equivalency->supersededById()] ?? null)
                 : null,
         ];
+    }
+
+    /**
+     * Batches the two lookups `toRow()` used to run per equivalency (course
+     * codes, superseding resolution numbers) into one query each for the
+     * whole batch — a page's worth in server mode, or the whole search
+     * result in client mode/export — instead of 1-2 extra queries per row.
+     *
+     * @param  array<int, Equivalency>  $equivalencies
+     * @return array<int, array<string, mixed>>
+     */
+    private function rowsFor(array $equivalencies): array
+    {
+        if ($equivalencies === []) {
+            return [];
+        }
+
+        $courseIds = collect($equivalencies)
+            ->flatMap(fn (Equivalency $equivalency) => [$equivalency->sourceCourseId(), $equivalency->targetCourseId()])
+            ->unique()
+            ->all();
+
+        $courseCodes = CourseModel::query()->whereIn('id', $courseIds)->pluck('code', 'id')->all();
+
+        $supersededByIds = collect($equivalencies)
+            ->map(fn (Equivalency $equivalency) => $equivalency->supersededById())
+            ->filter()
+            ->unique()
+            ->all();
+
+        $supersededNumbers = $supersededByIds === []
+            ? []
+            : EquivalencyModel::query()->whereIn('id', $supersededByIds)->pluck('resolution_number', 'id')->all();
+
+        return array_map(
+            fn (Equivalency $equivalency) => $this->toRow($equivalency, $courseCodes, $supersededNumbers),
+            $equivalencies,
+        );
     }
 
     /**
@@ -300,7 +364,7 @@ class EquivalencyComponent extends Component
      */
     private function freshRows(ListEquivalenciesUseCase $useCase): array
     {
-        return array_map($this->toRow(...), $useCase->all(sortBy: $this->sortKey, sortDir: $this->sortDir));
+        return $this->rowsFor($useCase->all(sortBy: $this->sortKey, sortDir: $this->sortDir));
     }
 
     /**
@@ -310,14 +374,11 @@ class EquivalencyComponent extends Component
     {
         $candidate = filled($search) ? $search : $this->search;
 
-        return array_map(
-            $this->toRow(...),
-            $useCase->all(
-                search: $candidate !== '' ? $candidate : null,
-                sortBy: $this->sortKey,
-                sortDir: $this->sortDir,
-            ),
-        );
+        return $this->rowsFor($useCase->all(
+            search: $candidate !== '' ? $candidate : null,
+            sortBy: $this->sortKey,
+            sortDir: $this->sortDir,
+        ));
     }
 
     /**
@@ -332,15 +393,5 @@ class EquivalencyComponent extends Component
             ['key' => 'resolutionNumber', 'label' => __('Resolution number')],
             ['key' => 'status', 'label' => __('Status')],
         ];
-    }
-
-    /**
-     * @return array<int, array{id: int, code: string, name: string}>
-     */
-    private function courseOptions(): array
-    {
-        return CourseModel::query()->active()->orderBy('code')->get(['id', 'code', 'name'])
-            ->map(fn (CourseModel $course) => ['id' => $course->id, 'code' => $course->code, 'name' => $course->name])
-            ->all();
     }
 }

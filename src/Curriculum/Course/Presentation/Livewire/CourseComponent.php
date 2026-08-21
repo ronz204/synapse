@@ -24,7 +24,6 @@ use Src\Curriculum\Course\Application\UseCases\UpdateCourseUseCase;
 use Src\Curriculum\Course\Domain\Entities\Course;
 use Src\Curriculum\Course\Presentation\Livewire\Forms\CourseForm;
 use Src\Shared\Export\Contracts\ExcelExporterInterface;
-use Src\Shared\Export\Contracts\PdfExporterInterface;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 #[Layout('layouts.dashboard', ['title' => 'Courses', 'subtitle' => 'Course catalog shared across study plans'])]
@@ -39,7 +38,7 @@ class CourseComponent extends Component
      * course list, not a per-plan-instance record) — client-side by
      * default, same reasoning as Role/Permission.
      */
-    protected string $tableMode = 'client';
+    protected string $tableMode = 'server';
 
     public bool $showModal = false;
 
@@ -133,16 +132,15 @@ class CourseComponent extends Component
         Flux::toast(variant: 'success', text: __('Course deactivated.'));
     }
 
-    public function exportPdf(PdfExporterInterface $exporter, ListCoursesUseCase $useCase, ?string $search = null): StreamedResponse
+    public function exportPdf(ListCoursesUseCase $useCase, ?string $search = null): void
     {
         $this->authorize('exportPdf', Course::class);
 
-        return $this->streamPdf(
+        $this->queuePdfExport(
             __('Courses'),
             $this->exportHeaders(),
             $this->exportableRows($useCase, $search),
             Str::slug(__('Courses')).'.pdf',
-            $exporter,
             paperSize: 'letter',
         );
     }

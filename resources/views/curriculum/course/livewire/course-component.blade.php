@@ -95,6 +95,8 @@
         @endif
     </x-ui.data-table>
 
+    <x-ui.pdf-export-status :id="$pdfExportId" :status="$pdfExportStatus" />
+
     <x-ui.modal :show="$showModal" :title="$editingId === null ? __('New course') : __('Edit course')">
         <div class="form-field">
             <label for="courseCode">{{ __('Code') }}</label>

@@ -7,22 +7,23 @@ namespace Src\Shared\Export\Infrastructure;
 use Spatie\Browsershot\Browsershot;
 use Spatie\LaravelPdf\Facades\Pdf;
 use Src\Shared\Export\Contracts\PdfExporterInterface;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Renders HTML to PDF via spatie/laravel-pdf, which delegates the
  * actual rendering to headless Chromium through Browsershot — the heavy
  * CSS/Tailwind layout work happens in the browser engine, never in the
- * PHP process itself.
+ * PHP process itself. Always called from a queued job
+ * (GenerateTableExportPdfJob), never from an HTTP request directly —
+ * see PdfExporterInterface's own docblock for why.
  *
  * Uses ->generatePdfContent() (raw bytes) rather than the package's own
  * ->name()/Responsable path deliberately: that path has a documented,
  * open issue specifically inside Livewire ("Livewire needs pdf as a
  * string not base64" — spatie/laravel-pdf discussion #120), where the
  * PDF arrives base64-encoded instead of as a clean binary stream.
- * Generating the bytes ourselves and handing them to Laravel's own
- * response()->streamDownload() sidesteps that entirely, and keeps this
- * adapter symmetric with SpatieExcelExporter.
+ * Generating the bytes ourselves keeps this adapter symmetric with
+ * SpatieExcelExporter and gives the caller (the queued job) a plain
+ * string to write to storage.
  *
  * ->withBrowsershot()->setNodeModulePath() points Browsershot's child
  * Node process straight at the project's own node_modules explicitly,
@@ -40,8 +41,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  * things that happen during setup), Browsershot raises a catchable
  * ProcessTimedOutException instead of PHP's blunt execution-time
  * FatalError with no usable message. See that config file for why the
- * default is sized for a cold start, and for its relationship to PHP's
- * own max_execution_time.
+ * default is sized for a cold start, and for its relationship to the
+ * queue worker's own timeout (GenerateTableExportPdfJob::$timeout).
  *
  * ->showBackground() is not optional here — Chrome's print/PDF engine
  * omits background colors and images by default (the same convention
@@ -69,9 +70,9 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 final class SpatiePdfExporter implements PdfExporterInterface
 {
-    public function fromHtml(string $html, string $filename, string $paperSize = 'a4'): StreamedResponse
+    public function toBytes(string $html, string $paperSize = 'a4'): string
     {
-        $pdfBytes = Pdf::html($html)
+        return Pdf::html($html)
             ->format($paperSize)
             ->withBrowsershot(function (Browsershot $browsershot): void {
                 $browsershot
@@ -94,18 +95,5 @@ final class SpatiePdfExporter implements PdfExporterInterface
                     ]);
             })
             ->generatePdfContent();
-
-        // We already have the complete PDF in memory at this point (unlike
-        // the Excel export, which genuinely streams row-by-row without ever
-        // knowing the total size upfront) — so, unlike Excel, we CAN tell
-        // the browser the exact byte count via Content-Length. That gets
-        // you an accurate download progress bar instead of an "unknown
-        // size" spinner; free correctness, not a performance trick.
-        return response()->streamDownload(function () use ($pdfBytes): void {
-            echo $pdfBytes;
-        }, $filename, [
-            'Content-Type' => 'application/pdf',
-            'Content-Length' => (string) strlen($pdfBytes),
-        ]);
     }
 }

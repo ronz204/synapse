@@ -4,14 +4,16 @@ declare(strict_types=1);
 
 namespace Src\Curriculum\Modality\Presentation\Livewire;
 
+use App\Livewire\Concerns\InteractsWithCourseSearch;
 use App\Livewire\Concerns\InteractsWithDataTable;
 use App\Livewire\Concerns\InteractsWithExports;
 use App\Models\Course as CourseModel;
 use App\Models\Modality as ModalityModel;
-use App\Models\ModalityResolution as ModalityResolutionModel;
 use Flux\Flux;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
@@ -25,7 +27,6 @@ use Src\Curriculum\Modality\Domain\Exceptions\NoValidModalityResolutionException
 use Src\Curriculum\Modality\Presentation\Livewire\Forms\ModalityAssignmentForm;
 use Src\Shared\Document\Contracts\AttachableDocument;
 use Src\Shared\Export\Contracts\ExcelExporterInterface;
-use Src\Shared\Export\Contracts\PdfExporterInterface;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -38,15 +39,30 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class ModalityAssignmentComponent extends Component
 {
     use AuthorizesRequests;
+    use InteractsWithCourseSearch;
     use InteractsWithDataTable;
     use InteractsWithExports;
     use WithFileUploads;
 
-    protected string $tableMode = 'client';
+    protected string $tableMode = 'server';
+
+    /**
+     * Explicit allow-list — $sortKey ultimately reaches raw SQL via
+     * orderBy(), and Livewire action arguments are client-controllable.
+     *
+     * @var array<int, string>
+     */
+    private const SORTABLE_COLUMNS = ['code', 'name'];
 
     public bool $showModal = false;
 
     public ModalityAssignmentForm $form;
+
+    /**
+     * Drives <x-ui.course-combobox> for the assignment course field — see
+     * EquivalencyComponent's $sourceCourseSearch for the same pattern.
+     */
+    public string $courseSearch = '';
 
     public function mount(): void
     {
@@ -59,8 +75,15 @@ class ModalityAssignmentComponent extends Component
         $this->authorize('create', ModalityResolution::class);
 
         $this->form->reset();
+        $this->courseSearch = '';
         $this->resetValidation();
         $this->showModal = true;
+    }
+
+    public function selectCourse(int $courseId, string $code, string $name): void
+    {
+        $this->form->courseId = $courseId;
+        $this->courseSearch = "{$code} — {$name}";
     }
 
     public function closeModal(): void
@@ -146,16 +169,15 @@ class ModalityAssignmentComponent extends Component
      * filter only exists in the browser — same reasoning CourseComponent's
      * exportPdf() already documents.
      */
-    public function exportPdf(PdfExporterInterface $exporter, ?string $search = null): StreamedResponse
+    public function exportPdf(?string $search = null): void
     {
         $this->authorize('exportPdf', ModalityResolution::class);
 
-        return $this->streamPdf(
+        $this->queuePdfExport(
             __('Modality Assignments'),
             $this->exportHeaders(),
             $this->exportableRows($search),
             Str::slug(__('Modality Assignments')).'.pdf',
-            $exporter,
             paperSize: 'letter',
         );
     }
@@ -174,11 +196,62 @@ class ModalityAssignmentComponent extends Component
 
     public function render(): View
     {
+        $view = $this->isServerMode()
+            ? $this->renderServerMode()
+            : $this->renderClientMode();
+
+        return $view
+            ->with('courseOptions', $this->searchActiveCourses($this->courseSearch))
+            ->with('modalityOptions', $this->modalityOptions());
+    }
+
+    private function renderClientMode(): View
+    {
         return view('curriculum.modality.livewire.modality-assignment-component', [
-            'rows' => $this->assignmentRows(),
-            'courseOptions' => $this->courseOptions(),
-            'modalityOptions' => $this->modalityOptions(),
+            'tableMode' => 'client',
+            'rows' => $this->rowsFor($this->courseQuery()->get()),
         ]);
+    }
+
+    private function renderServerMode(): View
+    {
+        $paginator = $this->courseQuery()->paginate(perPage: $this->perPage, page: $this->page);
+
+        return view('curriculum.modality.livewire.modality-assignment-component', [
+            'tableMode' => 'server',
+            'assignments' => new LengthAwarePaginator(
+                items: $this->rowsFor($paginator->getCollection()),
+                total: $paginator->total(),
+                perPage: $this->perPage,
+                currentPage: $this->page,
+            ),
+        ]);
+    }
+
+    /**
+     * Base query for the course/modality-assignment listing, shared by both
+     * render modes and the export path. Eager-loads `modality` and
+     * `modalityResolutions` once for the whole result set (a page, or the
+     * full catalog) so rowsFor() below never queries per course.
+     *
+     * @return Builder<CourseModel>
+     */
+    private function courseQuery(?string $search = null): Builder
+    {
+        $query = CourseModel::query()->active()->with(['modality', 'modalityResolutions']);
+
+        $term = $search ?? ($this->search !== '' ? $this->search : null);
+
+        if ($term !== null) {
+            $query->where(function (Builder $inner) use ($term): void {
+                $inner->where('code', 'like', "%{$term}%")
+                    ->orWhere('name', 'like', "%{$term}%");
+            });
+        }
+
+        $column = in_array($this->sortKey, self::SORTABLE_COLUMNS, true) ? $this->sortKey : 'code';
+
+        return $query->orderBy($column, $this->sortDir === 'desc' ? 'desc' : 'asc');
     }
 
     /**
@@ -206,46 +279,47 @@ class ModalityAssignmentComponent extends Component
      * EquivalencyComponent::toRow() already uses for course codes — no
      * dedicated use case for a purely presentational listing.
      *
+     * Resolves each course's backing resolution from its already-loaded
+     * `modalityResolutions` relation (eager-loaded once by courseQuery())
+     * instead of querying per course — same "valid one first, else latest"
+     * selection the original per-row query used, just done in memory.
+     *
+     * @param  iterable<int, CourseModel>  $courses
      * @return array<int, array<string, mixed>>
      */
-    private function assignmentRows(): array
+    private function rowsFor(iterable $courses): array
     {
-        return CourseModel::query()->active()->with('modality')->orderBy('code')->get()
-            ->map(function (CourseModel $course): array {
-                $modality = $course->modality;
-                $requiresResolution = $modality !== null && $modality->requires_resolution;
-                $resolution = null;
+        return collect($courses)->map(function (CourseModel $course): array {
+            $modality = $course->modality;
+            $requiresResolution = $modality !== null && $modality->requires_resolution;
+            $resolution = null;
 
-                if ($requiresResolution) {
-                    $resolution = ModalityResolutionModel::query()
-                        ->where('course_id', $course->id)
-                        ->where('modality_id', $course->modality_id)
-                        ->valid()
-                        ->latest('valid_from')
-                        ->first()
-                        ?? ModalityResolutionModel::query()
-                            ->where('course_id', $course->id)
-                            ->where('modality_id', $course->modality_id)
-                            ->latest('valid_from')
-                            ->first();
-                }
+            if ($requiresResolution) {
+                $candidates = $course->modalityResolutions->where('modality_id', $course->modality_id);
 
-                return [
-                    'id' => $course->id,
-                    'code' => $course->code,
-                    'name' => $course->name,
-                    'modalityName' => $modality?->name,
-                    'requiresResolution' => $requiresResolution,
-                    'resolutionId' => $resolution?->id,
-                    'resolutionNumber' => $resolution?->resolution_number,
-                    'validFrom' => $resolution?->valid_from?->toDateString(),
-                    'validTo' => $resolution?->valid_to?->toDateString(),
-                    'isCurrentlyValid' => $resolution !== null
-                        && $resolution->valid_from->lessThanOrEqualTo(now())
-                        && ($resolution->valid_to === null || $resolution->valid_to->greaterThanOrEqualTo(now())),
-                ];
-            })
-            ->all();
+                $resolution = $candidates
+                    ->filter(fn ($r) => $r->valid_from->lessThanOrEqualTo(now())
+                        && ($r->valid_to === null || $r->valid_to->greaterThanOrEqualTo(now())))
+                    ->sortByDesc('valid_from')
+                    ->first()
+                    ?? $candidates->sortByDesc('valid_from')->first();
+            }
+
+            return [
+                'id' => $course->id,
+                'code' => $course->code,
+                'name' => $course->name,
+                'modalityName' => $modality?->name,
+                'requiresResolution' => $requiresResolution,
+                'resolutionId' => $resolution?->id,
+                'resolutionNumber' => $resolution?->resolution_number,
+                'validFrom' => $resolution?->valid_from?->toDateString(),
+                'validTo' => $resolution?->valid_to?->toDateString(),
+                'isCurrentlyValid' => $resolution !== null
+                    && $resolution->valid_from->lessThanOrEqualTo(now())
+                    && ($resolution->valid_to === null || $resolution->valid_to->greaterThanOrEqualTo(now())),
+            ];
+        })->all();
     }
 
     /**
@@ -255,25 +329,7 @@ class ModalityAssignmentComponent extends Component
     {
         $candidate = filled($search) ? $search : $this->search;
 
-        if ($candidate === '') {
-            return $this->assignmentRows();
-        }
-
-        return array_values(array_filter(
-            $this->assignmentRows(),
-            fn (array $row) => str_contains(mb_strtolower($row['code']), mb_strtolower($candidate))
-                || str_contains(mb_strtolower($row['name']), mb_strtolower($candidate)),
-        ));
-    }
-
-    /**
-     * @return array<int, array{id: int, code: string, name: string}>
-     */
-    private function courseOptions(): array
-    {
-        return CourseModel::query()->active()->orderBy('code')->get(['id', 'code', 'name'])
-            ->map(fn (CourseModel $course) => ['id' => $course->id, 'code' => $course->code, 'name' => $course->name])
-            ->all();
+        return $this->rowsFor($this->courseQuery($candidate !== '' ? $candidate : null)->get());
     }
 
     /**

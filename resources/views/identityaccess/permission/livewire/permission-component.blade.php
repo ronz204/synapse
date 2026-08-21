@@ -67,6 +67,8 @@
         @endif
     </x-ui.data-table>
 
+    <x-ui.pdf-export-status :id="$pdfExportId" :status="$pdfExportStatus" />
+
     <x-ui.modal :show="$showModal" :title="$editingId === null ? __('New permission') : __('Edit permission')">
         <div class="form-field">
             <label for="permModule">{{ __('Module') }}</label>

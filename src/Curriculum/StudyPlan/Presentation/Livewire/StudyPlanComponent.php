@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Src\Curriculum\StudyPlan\Presentation\Livewire;
 
 use App\Enums\PlanClassification;
+use App\Livewire\Concerns\InteractsWithCourseSearch;
 use App\Livewire\Concerns\InteractsWithDataTable;
 use App\Livewire\Concerns\InteractsWithExports;
+use App\Models\Course as CourseModel;
 use App\Models\Program;
 use Flux\Flux;
 use Illuminate\Contracts\View\View;
@@ -15,8 +17,6 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
-use Src\Curriculum\Course\Application\UseCases\ListCoursesUseCase;
-use Src\Curriculum\Course\Domain\Entities\Course;
 use Src\Curriculum\StudyPlan\Application\DTOs\CourseLinkDTO;
 use Src\Curriculum\StudyPlan\Application\DTOs\LevelDTO;
 use Src\Curriculum\StudyPlan\Application\DTOs\PrerequisiteDTO;
@@ -36,7 +36,6 @@ use Src\Curriculum\StudyPlan\Domain\Exceptions\PrerequisiteCoursesMustDifferExce
 use Src\Curriculum\StudyPlan\Domain\Exceptions\TerminalPlanRequiresClosingDateException;
 use Src\Curriculum\StudyPlan\Presentation\Livewire\Forms\StudyPlanForm;
 use Src\Shared\Export\Contracts\ExcelExporterInterface;
-use Src\Shared\Export\Contracts\PdfExporterInterface;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
@@ -50,10 +49,11 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class StudyPlanComponent extends Component
 {
     use AuthorizesRequests;
+    use InteractsWithCourseSearch;
     use InteractsWithDataTable;
     use InteractsWithExports;
 
-    protected string $tableMode = 'client';
+    protected string $tableMode = 'server';
 
     public bool $showModal = false;
 
@@ -89,9 +89,23 @@ class StudyPlanComponent extends Component
      */
     public array $newCourseSelection = [];
 
+    /**
+     * Per-level text typed into <x-ui.course-combobox>'s search, keyed by
+     * the same level `key` as $newCourseSelection — see
+     * App\Livewire\Concerns\InteractsWithCourseSearch for why this replaced
+     * a full course list per level's <select>.
+     *
+     * @var array<string, string>
+     */
+    public array $newCourseSearchByLevel = [];
+
     public string $newPrerequisiteRequired = '';
 
     public string $newPrerequisiteDependent = '';
+
+    public string $prerequisiteRequiredSearch = '';
+
+    public string $prerequisiteDependentSearch = '';
 
     public function mount(): void
     {
@@ -181,6 +195,9 @@ class StudyPlanComponent extends Component
         $this->viewingPlanId = null;
         $this->structureLevels = [];
         $this->structurePrerequisites = [];
+        $this->newCourseSearchByLevel = [];
+        $this->prerequisiteRequiredSearch = '';
+        $this->prerequisiteDependentSearch = '';
     }
 
     public function addLevel(): void
@@ -240,6 +257,13 @@ class StudyPlanComponent extends Component
         unset($level);
 
         $this->newCourseSelection[$levelKey] = ['course_id' => null, 'credits' => null];
+        $this->newCourseSearchByLevel[$levelKey] = '';
+    }
+
+    public function selectCourseForLevel(string $levelKey, int $courseId, string $code, string $name): void
+    {
+        $this->newCourseSelection[$levelKey]['course_id'] = $courseId;
+        $this->newCourseSearchByLevel[$levelKey] = "{$code} — {$name}";
     }
 
     public function removeCourseFromLevel(string $levelKey, int $courseId): void
@@ -286,6 +310,20 @@ class StudyPlanComponent extends Component
 
         $this->newPrerequisiteRequired = '';
         $this->newPrerequisiteDependent = '';
+        $this->prerequisiteRequiredSearch = '';
+        $this->prerequisiteDependentSearch = '';
+    }
+
+    public function selectPrerequisiteRequired(int $courseId, string $code, string $name): void
+    {
+        $this->newPrerequisiteRequired = (string) $courseId;
+        $this->prerequisiteRequiredSearch = "{$code} — {$name}";
+    }
+
+    public function selectPrerequisiteDependent(int $courseId, string $code, string $name): void
+    {
+        $this->newPrerequisiteDependent = (string) $courseId;
+        $this->prerequisiteDependentSearch = "{$code} — {$name}";
     }
 
     public function removePrerequisite(string $key): void
@@ -359,22 +397,25 @@ class StudyPlanComponent extends Component
             ],
             $studyPlan->prerequisites(),
         );
+
+        $this->newCourseSearchByLevel = [];
+        $this->prerequisiteRequiredSearch = '';
+        $this->prerequisiteDependentSearch = '';
     }
 
     // ---------------------------------------------------------------
     // Exports (catalog only — the structure sub-view has no export)
     // ---------------------------------------------------------------
 
-    public function exportPdf(PdfExporterInterface $exporter, ListStudyPlansUseCase $useCase, ?string $search = null): StreamedResponse
+    public function exportPdf(ListStudyPlansUseCase $useCase, ?string $search = null): void
     {
         $this->authorize('exportPdf', StudyPlan::class);
 
-        return $this->streamPdf(
+        $this->queuePdfExport(
             __('Study Plans'),
             $this->exportHeaders(),
             $this->exportableRows($useCase, $search),
             Str::slug(__('Study Plans')).'.pdf',
-            $exporter,
             paperSize: 'letter',
         );
     }
@@ -399,10 +440,9 @@ class StudyPlanComponent extends Component
         ListStudyPlansUseCase $useCase,
         FindStudyPlanUseCase $findUseCase,
         GetActiveStudentCountsUseCase $countsUseCase,
-        ListCoursesUseCase $coursesUseCase,
     ): View {
         if ($this->viewingPlanId !== null) {
-            return $this->renderStructureView($findUseCase, $countsUseCase, $coursesUseCase);
+            return $this->renderStructureView($findUseCase, $countsUseCase);
         }
 
         $view = $this->isServerMode()
@@ -415,12 +455,16 @@ class StudyPlanComponent extends Component
     private function renderStructureView(
         FindStudyPlanUseCase $findUseCase,
         GetActiveStudentCountsUseCase $countsUseCase,
-        ListCoursesUseCase $coursesUseCase,
     ): View {
         return view('curriculum.study-plan.livewire.study-plan-structure', [
             'studyPlan' => $findUseCase->handle($this->viewingPlanId),
             'activeStudentCounts' => $countsUseCase->handle($this->viewingPlanId),
-            'courseOptions' => $this->courseOptions($coursesUseCase),
+            'linkedCourseInfo' => $this->linkedCourseInfo(),
+            'newCourseOptionsByLevel' => collect($this->structureLevels)
+                ->mapWithKeys(fn (array $level) => [$level['key'] => $this->searchActiveCourses($this->newCourseSearchByLevel[$level['key']] ?? '')])
+                ->all(),
+            'prerequisiteRequiredOptions' => $this->searchActiveCourses($this->prerequisiteRequiredSearch),
+            'prerequisiteDependentOptions' => $this->searchActiveCourses($this->prerequisiteDependentSearch),
         ]);
     }
 
@@ -519,18 +563,32 @@ class StudyPlanComponent extends Component
     }
 
     /**
-     * Read-only catalog for the structure sub-view's course pickers
-     * (add-course-to-level, add-prerequisite). Cross-aggregate read within
-     * the same Curriculum bounded context — same pragmatic coupling
-     * RoleComponent already uses to read the Permission catalog.
+     * Display info (code/name) for every course already linked into the
+     * structure being edited — a level's course, or a prerequisite's
+     * required/dependent course — keyed by course id. A targeted `whereIn`
+     * over just those ids, never the whole catalog: unlike the "pick a new
+     * course" pickers (searchActiveCourses(), narrowed to what's typed),
+     * these ids are already fixed by the saved structure and can't be
+     * limited to a search term the user never entered.
      *
      * @return array<int, array{id: int, code: string, name: string}>
      */
-    private function courseOptions(ListCoursesUseCase $useCase): array
+    private function linkedCourseInfo(): array
     {
-        return array_map(
-            static fn (Course $course) => ['id' => $course->id(), 'code' => $course->code(), 'name' => $course->name()],
-            $useCase->all(sortBy: 'code'),
-        );
+        $courseIds = collect($this->structureLevels)
+            ->flatMap(fn (array $level) => collect($level['courses'])->pluck('course_id'))
+            ->merge(collect($this->structurePrerequisites)->pluck('required_course_id'))
+            ->merge(collect($this->structurePrerequisites)->pluck('dependent_course_id'))
+            ->unique()
+            ->values();
+
+        if ($courseIds->isEmpty()) {
+            return [];
+        }
+
+        return CourseModel::query()->whereIn('id', $courseIds)->get(['id', 'code', 'name'])
+            ->keyBy('id')
+            ->map(fn (CourseModel $course): array => ['id' => $course->id, 'code' => $course->code, 'name' => $course->name])
+            ->all();
     }
 }

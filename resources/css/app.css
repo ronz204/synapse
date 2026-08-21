@@ -1075,6 +1075,70 @@ select:focus[data-flux-control] {
         text-align: center;
     }
 
+    /* ---------- course combobox (search-driven course picker) ----------
+
+       Server-searched replacement for a plain <select> full of every active
+       course — see App\Livewire\Concerns\InteractsWithCourseSearch. The
+       input reuses .form-field's own input styling (it's just a text
+       input); only the dropdown panel below it needs its own rules. */
+
+    .course-combobox {
+        position: relative;
+    }
+
+    .course-combobox-results {
+        position: absolute;
+        top: calc(100% + 4px);
+        left: 0;
+        right: 0;
+        z-index: 20;
+        max-height: 220px;
+        overflow-y: auto;
+        background: var(--color-background-surface);
+        border: 1px solid var(--color-border-default);
+        border-radius: 10px;
+        box-shadow: var(--shadow-elevation-3);
+    }
+
+    .course-combobox-option {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        padding: 9px 12px;
+        border: none;
+        background: transparent;
+        text-align: left;
+        cursor: pointer;
+        font-family: inherit;
+    }
+
+    .course-combobox-option:hover {
+        background: var(--color-background-subtle);
+    }
+
+    .course-combobox-code {
+        font-size: 12.5px;
+        font-weight: 700;
+        color: var(--color-text-brand);
+        flex-shrink: 0;
+    }
+
+    .course-combobox-name {
+        font-size: 13px;
+        color: var(--color-text-primary);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .course-combobox-empty {
+        padding: 10px;
+        font-size: 13px;
+        color: var(--color-text-tertiary);
+        text-align: center;
+    }
+
     /* ---------- delete confirmation ----------
 
        This overlay keeps its own palette on purpose: SIGA-UTN treats it as a
@@ -1412,6 +1476,117 @@ select:focus[data-flux-control] {
     .download-divider {
         height: 1px;
         background: var(--color-border-default);
+    }
+
+    /* ---------- queued PDF export snackbar ----------
+
+       Fixed to the viewport corner rather than inline after the table: a
+       long catalog previously meant scrolling all the way down just to see
+       whether the export was ready. data-variant carries the same
+       pending/ready/failed status the component tracks, and only changes
+       the accent colour + icon — position and motion stay the same across
+       all three so the snackbar doesn't jump around as the poll updates it. */
+
+    @keyframes pdf-toast-in {
+        from {
+            opacity: 0;
+            transform: translateY(12px) scale(0.98);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    .pdf-export-toast {
+        position: fixed;
+        right: 20px;
+        bottom: 20px;
+        z-index: 55;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        max-width: min(380px, calc(100vw - 32px));
+        padding: 14px 16px;
+        background: var(--color-background-surface);
+        border: 1px solid var(--color-border-default);
+        border-left: 3px solid var(--color-status-info);
+        border-radius: 12px;
+        box-shadow: var(--shadow-elevation-3);
+        font-size: 13px;
+        color: var(--color-text-secondary);
+        animation: pdf-toast-in 0.22s ease-out;
+    }
+
+    .pdf-export-toast[data-variant="ready"] {
+        border-left-color: var(--color-status-success);
+    }
+
+    .pdf-export-toast[data-variant="failed"] {
+        border-left-color: var(--color-status-danger);
+    }
+
+    .pdf-export-toast-icon {
+        display: flex;
+        flex-shrink: 0;
+        color: var(--color-status-info);
+    }
+
+    .pdf-export-toast[data-variant="ready"] .pdf-export-toast-icon {
+        color: var(--color-status-success);
+    }
+
+    .pdf-export-toast[data-variant="failed"] .pdf-export-toast-icon {
+        color: var(--color-status-danger);
+    }
+
+    .pdf-export-toast-text {
+        flex: 1;
+        min-width: 0;
+        color: var(--color-text-primary);
+        font-weight: 500;
+        line-height: 1.4;
+    }
+
+    .pdf-export-toast-actions {
+        display: flex;
+        align-items: center;
+        flex-shrink: 0;
+        gap: 6px;
+    }
+
+    .pdf-export-toast-dismiss {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        border: none;
+        background: transparent;
+        color: var(--color-text-tertiary);
+        cursor: pointer;
+    }
+
+    .pdf-export-toast-dismiss:hover {
+        background: var(--color-background-subtle);
+        color: var(--color-text-primary);
+    }
+
+    @media (max-width: 759px) {
+        .pdf-export-toast {
+            left: 12px;
+            right: 12px;
+            bottom: 12px;
+            max-width: none;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .pdf-export-toast {
+            animation: none;
+        }
     }
 
     /* ---------- controls ---------- */

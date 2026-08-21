@@ -76,6 +76,8 @@
         @endif
     </x-ui.data-table>
 
+    <x-ui.pdf-export-status :id="$pdfExportId" :status="$pdfExportStatus" />
+
     <x-ui.modal :show="$showModal" :title="$editingId === null ? __('New modality') : __('Edit modality')">
         <div class="form-field">
             <label for="modalityName">{{ __('Name') }}</label>

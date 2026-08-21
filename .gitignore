@@ -6,6 +6,8 @@
 /public/storage
 /storage/*.key
 /storage/pail
+/storage/debugbar
+/.playwright-mcp
 /vendor
 .env
 .env.backup
