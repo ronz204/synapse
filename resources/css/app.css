@@ -1075,6 +1075,70 @@ select:focus[data-flux-control] {
         text-align: center;
     }
 
+    /* ---------- course combobox (search-driven course picker) ----------
+
+       Server-searched replacement for a plain <select> full of every active
+       course — see App\Livewire\Concerns\InteractsWithCourseSearch. The
+       input reuses .form-field's own input styling (it's just a text
+       input); only the dropdown panel below it needs its own rules. */
+
+    .course-combobox {
+        position: relative;
+    }
+
+    .course-combobox-results {
+        position: absolute;
+        top: calc(100% + 4px);
+        left: 0;
+        right: 0;
+        z-index: 20;
+        max-height: 220px;
+        overflow-y: auto;
+        background: var(--color-background-surface);
+        border: 1px solid var(--color-border-default);
+        border-radius: 10px;
+        box-shadow: var(--shadow-elevation-3);
+    }
+
+    .course-combobox-option {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        padding: 9px 12px;
+        border: none;
+        background: transparent;
+        text-align: left;
+        cursor: pointer;
+        font-family: inherit;
+    }
+
+    .course-combobox-option:hover {
+        background: var(--color-background-subtle);
+    }
+
+    .course-combobox-code {
+        font-size: 12.5px;
+        font-weight: 700;
+        color: var(--color-text-brand);
+        flex-shrink: 0;
+    }
+
+    .course-combobox-name {
+        font-size: 13px;
+        color: var(--color-text-primary);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .course-combobox-empty {
+        padding: 10px;
+        font-size: 13px;
+        color: var(--color-text-tertiary);
+        text-align: center;
+    }
+
     /* ---------- delete confirmation ----------
 
        This overlay keeps its own palette on purpose: SIGA-UTN treats it as a

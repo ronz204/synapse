@@ -85,28 +85,32 @@
         @endif
     </x-ui.data-table>
 
+    <x-ui.pdf-export-status :id="$pdfExportId" :status="$pdfExportStatus" />
+
     <x-ui.modal :show="$showModal" :title="$conflictingEquivalencyId === null ? __('Register equivalency') : __('Resolve contradiction')">
         @if ($conflictingEquivalencyId === null)
         {{-- Plain registration form. --}}
         <div class="form-field">
             <label for="equivalencySourceCourse">{{ __('Source course (old plan)') }}</label>
-            <select id="equivalencySourceCourse" wire:model="form.sourceCourseId" class="{{ $errors->has('form.sourceCourseId') ? 'has-error' : '' }}">
-                <option value="">{{ __('Select a course...') }}</option>
-                @foreach ($courseOptions as $course)
-                <option value="{{ $course['id'] }}">{{ $course['code'] }} — {{ $course['name'] }}</option>
-                @endforeach
-            </select>
+            <x-ui.course-combobox
+                id="equivalencySourceCourse"
+                search-property="sourceCourseSearch"
+                select-action="selectSourceCourse"
+                :options="$sourceCourseOptions"
+                :has-error="$errors->has('form.sourceCourseId')"
+            />
             @error('form.sourceCourseId') <span class="form-error">{{ $message }}</span> @enderror
         </div>
 
         <div class="form-field">
             <label for="equivalencyTargetCourse">{{ __('Target course (new plan)') }}</label>
-            <select id="equivalencyTargetCourse" wire:model="form.targetCourseId" class="{{ $errors->has('form.targetCourseId') ? 'has-error' : '' }}">
-                <option value="">{{ __('Select a course...') }}</option>
-                @foreach ($courseOptions as $course)
-                <option value="{{ $course['id'] }}">{{ $course['code'] }} — {{ $course['name'] }}</option>
-                @endforeach
-            </select>
+            <x-ui.course-combobox
+                id="equivalencyTargetCourse"
+                search-property="targetCourseSearch"
+                select-action="selectTargetCourse"
+                :options="$targetCourseOptions"
+                :has-error="$errors->has('form.targetCourseId')"
+            />
             @error('form.targetCourseId') <span class="form-error">{{ $message }}</span> @enderror
         </div>
 

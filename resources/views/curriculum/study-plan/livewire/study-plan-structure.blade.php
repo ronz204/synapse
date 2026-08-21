@@ -62,7 +62,7 @@
 
                 @forelse ($level['courses'] as $courseLink)
                 @php
-                    $courseInfo = collect($courseOptions)->firstWhere('id', $courseLink['course_id']);
+                    $courseInfo = $linkedCourseInfo[$courseLink['course_id']] ?? null;
                 @endphp
                 <div class="data-row" role="row" wire:key="course-{{ $level['key'] }}-{{ $courseLink['course_id'] }}">
                     <span class="font-mono text-xs">{{ $courseInfo['code'] ?? $courseLink['course_id'] }}</span>
@@ -88,12 +88,14 @@
         @if (Auth::user()->can('update', $studyPlan))
         <div class="card-controls">
             <div class="control-group">
-                <select wire:model="newCourseSelection.{{ $level['key'] }}.course_id" style="min-width: 220px;">
-                    <option value="">{{ __('Select a course...') }}</option>
-                    @foreach ($courseOptions as $course)
-                    <option value="{{ $course['id'] }}">{{ $course['code'] }} — {{ $course['name'] }}</option>
-                    @endforeach
-                </select>
+                <x-ui.course-combobox
+                    id="newCourseForLevel{{ $level['key'] }}"
+                    search-property="newCourseSearchByLevel.{{ $level['key'] }}"
+                    select-action="selectCourseForLevel"
+                    :action-args="[$level['key']]"
+                    :options="$newCourseOptionsByLevel[$level['key']] ?? []"
+                    style="min-width: 220px;"
+                />
                 <input type="number" min="1" wire:model="newCourseSelection.{{ $level['key'] }}.credits" placeholder="{{ __('Credits') }}" style="width: 100px;">
                 <button type="button" class="btn btn-primary" wire:click="addCourseToLevel('{{ $level['key'] }}')">{{ __('Add course') }}</button>
             </div>
@@ -121,8 +123,8 @@
 
                 @forelse ($structurePrerequisites as $prerequisite)
                 @php
-                    $requiredInfo = collect($courseOptions)->firstWhere('id', $prerequisite['required_course_id']);
-                    $dependentInfo = collect($courseOptions)->firstWhere('id', $prerequisite['dependent_course_id']);
+                    $requiredInfo = $linkedCourseInfo[$prerequisite['required_course_id']] ?? null;
+                    $dependentInfo = $linkedCourseInfo[$prerequisite['dependent_course_id']] ?? null;
                 @endphp
                 <div class="data-row" role="row" wire:key="prerequisite-{{ $prerequisite['key'] }}">
                     <span>{{ $requiredInfo['code'] ?? $prerequisite['required_course_id'] }} — {{ $requiredInfo['name'] ?? '' }}</span>
@@ -148,19 +150,21 @@
         <div class="card-controls">
             <div class="control-group">
                 <span>{{ __('Required') }}</span>
-                <select wire:model="newPrerequisiteRequired" style="min-width: 200px;">
-                    <option value="">{{ __('Select a course...') }}</option>
-                    @foreach ($courseOptions as $course)
-                    <option value="{{ $course['id'] }}">{{ $course['code'] }} — {{ $course['name'] }}</option>
-                    @endforeach
-                </select>
+                <x-ui.course-combobox
+                    id="newPrerequisiteRequired"
+                    search-property="prerequisiteRequiredSearch"
+                    select-action="selectPrerequisiteRequired"
+                    :options="$prerequisiteRequiredOptions"
+                    style="min-width: 200px;"
+                />
                 <span>{{ __('Dependent') }}</span>
-                <select wire:model="newPrerequisiteDependent" style="min-width: 200px;">
-                    <option value="">{{ __('Select a course...') }}</option>
-                    @foreach ($courseOptions as $course)
-                    <option value="{{ $course['id'] }}">{{ $course['code'] }} — {{ $course['name'] }}</option>
-                    @endforeach
-                </select>
+                <x-ui.course-combobox
+                    id="newPrerequisiteDependent"
+                    search-property="prerequisiteDependentSearch"
+                    select-action="selectPrerequisiteDependent"
+                    :options="$prerequisiteDependentOptions"
+                    style="min-width: 200px;"
+                />
                 <button type="button" class="btn btn-primary" wire:click="addPrerequisite">{{ __('Add prerequisite') }}</button>
             </div>
         </div>
