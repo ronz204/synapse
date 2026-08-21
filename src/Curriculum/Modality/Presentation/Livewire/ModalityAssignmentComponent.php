@@ -82,11 +82,11 @@ class ModalityAssignmentComponent extends Component
                 $this->form->toResolutionDto($document),
             );
         } catch (NoValidModalityResolutionException $e) {
-            Flux::toast(variant: 'danger', text: $e->getMessage());
+            Flux::toast(variant: 'danger', text: __($e->getMessage()));
 
             return;
         } catch (ModalityResolutionDocumentRequiredException $e) {
-            $this->addError('form.document', $e->getMessage());
+            $this->addError('form.document', __($e->getMessage()));
 
             return;
         }

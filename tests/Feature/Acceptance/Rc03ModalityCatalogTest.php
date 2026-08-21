@@ -52,7 +52,7 @@ it('RC-03 AC1 — assigning the Hybrid modality with no currently-valid resoluti
         // Verbatim wording from the criterion, which the rubric grades
         // directly — ModalityAssignmentComponent surfaces the domain
         // exception's own message, so what the user sees is this string.
-        ->assertDispatched('toast-show', dataset: ['variant' => 'danger'], slots: ['text' => 'No valid modality resolution exists for this course.']);
+        ->assertDispatched('toast-show', dataset: ['variant' => 'danger'], slots: ['text' => __('No valid modality resolution exists for this course.')]);
 
     // Rejected outright — the course keeps the modality it already had.
     expect($course->fresh()->modality_id)->toBe($presencial->id);
@@ -75,7 +75,7 @@ it('RC-03 AC1 — an expired resolution does not satisfy the gate either', funct
         ->set('form.courseId', $course->id)
         ->set('form.modalityId', $hybrid->id)
         ->call('assign')
-        ->assertDispatched('toast-show', dataset: ['variant' => 'danger'], slots: ['text' => 'No valid modality resolution exists for this course.']);
+        ->assertDispatched('toast-show', dataset: ['variant' => 'danger'], slots: ['text' => __('No valid modality resolution exists for this course.')]);
 
     expect($course->fresh()->modality_id)->not->toBe($hybrid->id);
 });

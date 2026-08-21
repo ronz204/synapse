@@ -59,6 +59,23 @@ class ModalityAssignmentForm extends Form
     }
 
     /**
+     * Kept word-for-word identical to
+     * ModalityResolutionDocumentRequiredException::missing()'s message —
+     * this Form rejects a missing document before the domain layer ever
+     * runs, so without this override the user would see Laravel's generic
+     * "The document field is required." instead of the wording the domain
+     * exception carries. Same pattern EquivalencyForm::messages() uses.
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'document.required' => __('You must attach the document that backs this modality resolution.'),
+        ];
+    }
+
+    /**
      * True the moment the user has touched any field of the resolution
      * block — from then on, the whole group is required together.
      */

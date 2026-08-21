@@ -95,7 +95,7 @@ class ModalityComponent extends Component
                 $updateUseCase->handle($this->editingId, $this->form->toDto());
             }
         } catch (ModalityNameAlreadyExistsException $e) {
-            $this->addError('form.name', $e->getMessage());
+            $this->addError('form.name', __('A modality named :name already exists.', ['name' => $e->modalityName()]));
 
             return;
         }
@@ -114,7 +114,7 @@ class ModalityComponent extends Component
         try {
             $useCase->handle($id);
         } catch (ModalityInUseException $e) {
-            Flux::toast(variant: 'danger', text: $e->getMessage());
+            Flux::toast(variant: 'danger', text: __('Modality with id :id is still in use and cannot be deleted.', ['id' => $e->modalityId()]));
 
             return;
         }
