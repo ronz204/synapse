@@ -13,8 +13,20 @@ use DomainException;
  */
 final class ModalityInUseException extends DomainException
 {
+    private function __construct(
+        string $message,
+        private readonly int $modalityId,
+    ) {
+        parent::__construct($message);
+    }
+
     public static function forId(int $modalityId): self
     {
-        return new self("Modality with id [{$modalityId}] is still in use and cannot be deleted.");
+        return new self("Modality with id [{$modalityId}] is still in use and cannot be deleted.", $modalityId);
+    }
+
+    public function modalityId(): int
+    {
+        return $this->modalityId;
     }
 }
