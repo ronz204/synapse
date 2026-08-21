@@ -329,6 +329,11 @@
   "Keep existing resolution": "Mantener resolución existente",
   "Use new resolution": "Usar nueva resolución",
   "Resolve contradiction": "Resolver contradicción",
+  "You must attach the resolution that approves this equivalency.": "Debe adjuntar la resolución que aprueba esta equivalencia.",
+  "Cannot save: this would close a cycle (:chain).": "No se puede guardar: esto cerraría un ciclo (:chain).",
+  "Equivalency registered.": "Equivalencia registrada.",
+  "New resolution registered; the previous one is now Superseded.": "Nueva resolución registrada; la anterior ahora está Superada.",
+  "Existing resolution kept; the new submission is now Superseded.": "Resolución existente conservada; la nueva presentación ahora está Superada.",
 
   "Modality catalog": "Catálogo de modalidades",
   "New modality": "Nueva modalidad",
@@ -369,5 +374,21 @@
   "Teaching modality catalog": "Catálogo de modalidades de impartición",
   "Modality Assignments": "Asignaciones de modalidad",
   "Assign a teaching modality to a course, backed by a resolution when required": "Asigne una modalidad de impartición a un curso, respaldada por una resolución cuando se requiera",
-  "Cross-plan course equivalencies and their integrity checks": "Equivalencias de cursos entre planes y sus validaciones de integridad"
+  "Cross-plan course equivalencies and their integrity checks": "Equivalencias de cursos entre planes y sus validaciones de integridad",
+
+  "Academic History": "Historial académico",
+  "Academic history": "Historial académico",
+  "Simplified internal history per student": "Historial interno simplificado por estudiante",
+  "National ID": "Cédula",
+  "Student": "Estudiante",
+  "View history": "Ver historial",
+  "Back to students": "Volver a estudiantes",
+  "Simplified internal history": "Historial interno simplificado",
+  "accredited by equivalency": "acreditados por equivalencia",
+  "This student has no academic records yet": "Este estudiante aún no tiene registros académicos",
+  "Passed": "Aprobado",
+  "Failed": "Reprobado",
+  "Accredited By Equivalency": "Acreditado por equivalencia",
+  "Accredited By Validation": "Acreditado por otra validación",
+  "Prerequisite Waived": "Prerrequisito exonerado"
 }

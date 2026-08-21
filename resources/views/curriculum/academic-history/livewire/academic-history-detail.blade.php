@@ -40,10 +40,8 @@
                     <span class="font-mono text-xs">{{ $entry->courseCode }}</span>
                     <span>{{ $entry->courseName }}</span>
                     <span>
-                        {{-- The enum's stored value, in Spanish, is what RC-02b
-                             names verbatim as the mark a course must carry. --}}
                         <span class="status-badge {{ $entry->isAccreditedByEquivalency() ? 'custom' : 'system' }}">
-                            {{ $entry->status->value }}
+                            {{ __(Str::headline($entry->status->name)) }}
                         </span>
                     </span>
                     <span class="font-mono text-xs">{{ $entry->resolutionNumber ?? '—' }}</span>

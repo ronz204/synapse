@@ -97,7 +97,7 @@ class EquivalencyComponent extends Component
 
             return;
         } catch (EquivalencyDocumentRequiredException $e) {
-            $this->addError('form.document', $e->getMessage());
+            $this->addError('form.document', __($e->getMessage()));
 
             return;
         }
@@ -134,7 +134,7 @@ class EquivalencyComponent extends Component
         try {
             $useCase->handle($this->form->toDto($document), $existingId, $winner === 'candidate');
         } catch (EquivalencyDocumentRequiredException $e) {
-            $this->addError('form.document', $e->getMessage());
+            $this->addError('form.document', __($e->getMessage()));
 
             return;
         }

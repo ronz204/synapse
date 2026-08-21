@@ -7,6 +7,7 @@ use App\Models\Course;
 use App\Models\Equivalency;
 use App\Models\Student;
 use App\Models\StudentAcademicRecord;
+use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Src\Curriculum\AcademicHistory\Application\UseCases\GetStudentAcademicHistoryUseCase;
 use Src\Curriculum\AcademicHistory\Domain\Exceptions\StudentAcademicHistoryNotFoundException;
@@ -78,9 +79,10 @@ it('shows a course accredited by equivalency together with its resolution number
         ->call('viewHistory', $student->id)
         ->assertSee('HIST-101')
         ->assertSee('Accredited course')
-        // The status is rendered from the enum's stored value, which is the
-        // exact wording RC-02b requires the course to be marked with.
-        ->assertSee(AcademicRecordStatus::AccreditedByEquivalency->value)
+        // The status is rendered as a human-readable, localized label — not
+        // the raw enum value — matching the wording RC-02b requires the
+        // course to be marked with.
+        ->assertSee(__(Str::headline(AcademicRecordStatus::AccreditedByEquivalency->name)))
         ->assertSee('R-HIST-001');
 });
 
@@ -99,7 +101,7 @@ it('leaves the resolution column empty for a course the student actually passed'
         ->test(AcademicHistoryComponent::class)
         ->call('viewHistory', $student->id)
         ->assertSee('HIST-202')
-        ->assertSee(AcademicRecordStatus::Passed->value);
+        ->assertSee(__(Str::headline(AcademicRecordStatus::Passed->name)));
 
     // Nothing to cite: the entry carries no resolution for the view to print.
     $history = app(GetStudentAcademicHistoryUseCase::class)->handle($student->id);

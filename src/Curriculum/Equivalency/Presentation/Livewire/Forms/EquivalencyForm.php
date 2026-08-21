@@ -52,6 +52,23 @@ class EquivalencyForm extends Form
     }
 
     /**
+     * Kept word-for-word identical to
+     * EquivalencyDocumentRequiredException::missing()'s message — this Form
+     * rejects a missing document before the domain layer ever runs, so
+     * without this override the user would see Laravel's generic "The
+     * document field is required." instead of the wording the acceptance
+     * criteria mandate.
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'document.required' => __('You must attach the resolution that approves this equivalency.'),
+        ];
+    }
+
+    /**
      * Called only once the document is actually being persisted — the
      * component reads $this->document itself (hash, size, mime, and the
      * store() call) and hands the resulting value object back here, so this

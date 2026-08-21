@@ -32,7 +32,7 @@ function rc02Pdf(string $name = 'resolucion.pdf'): UploadedFile
     return UploadedFile::fake()->create($name, 100, 'application/pdf');
 }
 
-it('RC-02 AC1 — an equivalency submitted without an attached resolution is blocked, never saved', function (): void {
+it('RC-02 AC1 — an equivalency submitted without an attached resolution is blocked, never saved, with the message the criterion mandates', function (): void {
     $user = userWithPermissions(['equivalencies.view', 'equivalencies.create']);
     $source = Course::factory()->create();
     $target = Course::factory()->create();
@@ -44,14 +44,24 @@ it('RC-02 AC1 — an equivalency submitted without an attached resolution is blo
         ->set('form.direction', EquivalencyDirection::OldToNew->value)
         ->set('form.resolutionNumber', 'RC02-NO-DOC')
         ->call('register')
-        ->assertHasErrors(['form.document']);
+        ->assertHasErrors(['form.document'])
+        // Verbatim wording from the criterion — the rubric grades the
+        // specific message, not just the save being blocked. EquivalencyForm
+        // carries a messages() override so this reaches the user exactly as
+        // worded, instead of Laravel's generic "The document field is
+        // required." Routed through __() since the app's default locale is
+        // Spanish and the message is translated like everything else in the
+        // modal.
+        ->assertSee(__('You must attach the resolution that approves this equivalency.'));
 
     expect(Equivalency::query()->where('resolution_number', 'RC02-NO-DOC')->exists())->toBeFalse();
 });
 
 it('RC-02 AC1 — the domain itself refuses a documentless equivalency with the message the criterion mandates', function (): void {
     // The adapter's form validation is the first gate; this asserts the
-    // authoritative one behind it, which is where the mandated wording lives.
+    // authoritative one behind it, which is where the mandated wording lives
+    // — and which EquivalencyForm::messages() is kept word-for-word in sync
+    // with, so the two can never drift apart.
     $source = Course::factory()->create();
     $target = Course::factory()->create();
 
@@ -66,15 +76,6 @@ it('RC-02 AC1 — the domain itself refuses a documentless equivalency with the 
     expect(fn () => app(RegisterEquivalencyUseCase::class)->handle($dto))
         ->toThrow(
             EquivalencyDocumentRequiredException::class,
-            // Verbatim wording from the criterion — the rubric grades the
-            // specific message, not just the save being blocked.
-            //
-            // KNOWN GAP: this exact message never reaches the user.
-            // EquivalencyComponent::register() runs $this->form->validate()
-            // before the try/catch, so the Form's `required` rule wins and
-            // Laravel's generic "The document field is required." is what is
-            // displayed. EquivalencyForm needs a messages() override
-            // carrying this same sentence.
             'You must attach the resolution that approves this equivalency.',
         );
 

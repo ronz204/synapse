@@ -18,6 +18,7 @@ use App\Models\Student;
 use App\Models\StudentAcademicRecord;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Src\Curriculum\AcademicHistory\Presentation\Livewire\AcademicHistoryComponent;
 use Src\Curriculum\Equivalency\Presentation\Livewire\EquivalencyComponent;
@@ -166,9 +167,12 @@ it('RC-02b Entradas/Salidas — the student list and the accredited course with 
         ->assertSee('9-9999-9999')
         ->call('viewHistory', $student->id)
         // Salida: the target course, marked accredited, next to its resolution.
+        // Asserts the human-readable, localized label — not the raw enum
+        // value — since that's what the criterion's "Accredited by
+        // equivalency" wording actually describes showing to a reader.
         ->assertSee('RC02B-VIEW-NEW')
         ->assertSee('Course reached by equivalency')
-        ->assertSee(AcademicRecordStatus::AccreditedByEquivalency->value)
+        ->assertSee(__(Str::headline(AcademicRecordStatus::AccreditedByEquivalency->name)))
         ->assertSee('RC02B-VIEW-001');
 });
 
@@ -191,7 +195,7 @@ it('RC-02b Salidas — a student the resolution does not reach shows no accredit
         ->test(AcademicHistoryComponent::class)
         ->call('viewHistory', $student->id)
         ->assertSee('RC02B-BLANK-NEW')
-        ->assertSee(AcademicRecordStatus::Passed->value)
-        ->assertDontSee(AcademicRecordStatus::AccreditedByEquivalency->value)
+        ->assertSee(__(Str::headline(AcademicRecordStatus::Passed->name)))
+        ->assertDontSee(__(Str::headline(AcademicRecordStatus::AccreditedByEquivalency->name)))
         ->assertDontSee('RC02B-BLANK-001');
 });
