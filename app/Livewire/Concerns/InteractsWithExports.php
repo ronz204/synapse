@@ -116,8 +116,14 @@ trait InteractsWithExports
             $mapped = [];
 
             foreach ($headers as $header) {
-                $value = $row[$header['key']] ?? '';
-                $mapped[$header['label']] = isset($header['format']) ? ($header['format'])($value) : $value;
+                // A `format` callback must see the raw value, null included —
+                // a column's own callback (e.g. StudyPlan's enrollment closing
+                // date, `fn (?string $v) => $v ?? '—'`) is precisely what
+                // decides how a missing value should render. Collapsing null
+                // to '' here would run before that decision and make such a
+                // callback's null branch permanently unreachable.
+                $value = $row[$header['key']] ?? null;
+                $mapped[$header['label']] = isset($header['format']) ? ($header['format'])($value) : ($value ?? '');
             }
 
             yield $mapped;
