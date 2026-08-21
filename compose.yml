@@ -26,11 +26,32 @@ services:
       retries: 3
       timeout: 5s
 
+  synapse-redis:
+    image: redis:alpine
+    container_name: synapse-redis
+    restart: unless-stopped
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+    volumes:
+      - synapse-redis-data:/data
+    networks:
+      - synapse-network
+    healthcheck:
+      test:
+        - CMD
+        - redis-cli
+        - ping
+      retries: 3
+      timeout: 5s
+
 
 volumes:
   synapse-data:
     driver: local
     name: synapse-data
+  synapse-redis-data:
+    driver: local
+    name: synapse-redis-data
 
 networks:
   synapse-network:
