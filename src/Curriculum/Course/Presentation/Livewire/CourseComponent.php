@@ -39,7 +39,7 @@ class CourseComponent extends Component
      * course list, not a per-plan-instance record) — client-side by
      * default, same reasoning as Role/Permission.
      */
-    protected string $tableMode = 'client';
+    protected string $tableMode = 'server';
 
     public bool $showModal = false;
 

@@ -42,7 +42,7 @@ class RoleComponent extends Component
      * zero further server round-trips. Flip to 'server' only if this
      * catalog is ever expected to grow into the hundreds/thousands.
      */
-    protected string $tableMode = 'client';
+    protected string $tableMode = 'server';
 
     public bool $showModal = false;
 

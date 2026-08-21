@@ -37,7 +37,7 @@ class ModalityComponent extends Component
      * Small reference-style catalog (5+ values by seed, rarely more than a
      * few dozen) — client-side by default, same reasoning as Role/Course.
      */
-    protected string $tableMode = 'client';
+    protected string $tableMode = 'server';
 
     public bool $showModal = false;
 

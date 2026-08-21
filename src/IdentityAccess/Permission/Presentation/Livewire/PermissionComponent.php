@@ -35,7 +35,7 @@ class PermissionComponent extends Component
      * Permissions are `modules x actions` — a small, reference-style
      * catalog. Same reasoning as RoleComponent: client-side by default.
      */
-    protected string $tableMode = 'client';
+    protected string $tableMode = 'server';
 
     public bool $showModal = false;
 
