@@ -49,7 +49,7 @@ it('rejects assigning a modality that requires a resolution when none is on file
         ->set('form.courseId', $course->id)
         ->set('form.modalityId', $modality->id)
         ->call('assign')
-        ->assertDispatched('toast-show', dataset: ['variant' => 'danger'], slots: ['text' => 'No valid modality resolution exists for this course.']);
+        ->assertDispatched('toast-show', dataset: ['variant' => 'danger'], slots: ['text' => __('No valid modality resolution exists for this course.')]);
 
     expect($course->fresh()->modality_id)->not->toBe($modality->id);
 });
@@ -67,7 +67,11 @@ it('rejects filing a resolution without an attached document', function (): void
         ->set('form.approvingBody', 'Consejo Universitario')
         ->set('form.validFrom', now()->subDay()->toDateString())
         ->call('assign')
-        ->assertHasErrors(['form.document']);
+        ->assertHasErrors(['form.document'])
+        // ModalityAssignmentForm carries a messages() override so this
+        // reaches the user exactly as the domain exception words it,
+        // instead of Laravel's generic "The document field is required."
+        ->assertSee(__('You must attach the document that backs this modality resolution.'));
 
     expect(ModalityResolution::query()->where('resolution_number', 'R-1')->exists())->toBeFalse();
 });
@@ -133,7 +137,7 @@ it('rejects assigning when the only resolution on file has already expired', fun
         ->set('form.courseId', $course->id)
         ->set('form.modalityId', $modality->id)
         ->call('assign')
-        ->assertDispatched('toast-show', dataset: ['variant' => 'danger'], slots: ['text' => 'No valid modality resolution exists for this course.']);
+        ->assertDispatched('toast-show', dataset: ['variant' => 'danger'], slots: ['text' => __('No valid modality resolution exists for this course.')]);
 
     expect($course->fresh()->modality_id)->not->toBe($modality->id);
 });
