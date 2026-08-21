@@ -64,6 +64,8 @@
         @endif
     </x-ui.data-table>
 
+    <x-ui.pdf-export-status :id="$pdfExportId" :status="$pdfExportStatus" />
+
     <x-ui.modal :show="$showModal" :title="$editingId === null ? __('New study plan') : __('Edit study plan')">
         <div class="form-field">
             <label for="planProgram">{{ __('Program') }}</label>

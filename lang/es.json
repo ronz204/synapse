@@ -398,5 +398,10 @@
   "Failed": "Reprobado",
   "Accredited By Equivalency": "Acreditado por equivalencia",
   "Accredited By Validation": "Acreditado por otra validación",
-  "Prerequisite Waived": "Prerrequisito exonerado"
+  "Prerequisite Waived": "Prerrequisito exonerado",
+  "Dismiss": "Descartar",
+  "Your PDF export is ready.": "Tu exportación a PDF está lista.",
+  "The PDF export could not be generated. Please try again.": "No se pudo generar la exportación a PDF. Inténtalo de nuevo.",
+  "Generating your PDF export — this can take a few seconds...": "Generando tu exportación a PDF — esto puede tardar unos segundos...",
+  "Your Excel export is ready to download.": "Tu exportación a Excel está lista para descargar."
 }
