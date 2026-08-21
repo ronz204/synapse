@@ -25,6 +25,7 @@ class DatabaseSeeder extends Seeder
             CurriculumDemoSeeder::class,
             EquivalencyDemoSeeder::class,
             ModalityAssignmentDemoSeeder::class,
+            PerformanceVolumeSeeder::class,
         ]);
 
         // User::factory(10)->create();
