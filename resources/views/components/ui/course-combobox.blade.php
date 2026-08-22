@@ -19,17 +19,57 @@
     is empty for a single, unqualified picker like Equivalency's source/
     target course.
 --}}
-<div {{ $attributes->class(['course-combobox']) }} x-data="{ open: false }" @click.outside="open = false">
+<div
+    {{ $attributes->class(['course-combobox']) }}
+    x-data="{
+        open: false,
+        dropTop: 0,
+        dropLeft: 0,
+        dropWidth: 0,
+        reposition() {
+            // position:fixed is viewport-relative, so this must NOT add
+            // window.scrollY/scrollX — the dropdown would render off the
+            // portion of the page currently in view.
+            const rect = this.$refs.input.getBoundingClientRect();
+            this.dropTop   = rect.bottom + 4;
+            this.dropLeft  = rect.left;
+            this.dropWidth = rect.width;
+        },
+        openDrop() {
+            this.reposition();
+            this.open = true;
+        },
+        _onScroll: null,
+        _onResize: null,
+        init() {
+            this._onScroll = () => { if (this.open) this.reposition(); };
+            this._onResize = () => { if (this.open) this.reposition(); };
+            window.addEventListener('scroll', this._onScroll, true);
+            window.addEventListener('resize', this._onResize);
+        },
+        destroy() {
+            window.removeEventListener('scroll', this._onScroll, true);
+            window.removeEventListener('resize', this._onResize);
+        },
+    }"
+    @click.outside="open = false"
+>
     <input
+        x-ref="input"
         type="text"
         id="{{ $id }}"
         wire:model.live.debounce.300ms="{{ $searchProperty }}"
-        @focus="open = true"
+        @focus="openDrop()"
         placeholder="{{ __('Search course by code or name...') }}"
         autocomplete="off"
         class="{{ $hasError ? 'has-error' : '' }}"
     >
-    <div class="course-combobox-results" x-show="open" x-cloak>
+    <div
+        class="course-combobox-results course-combobox-results--fixed"
+        x-show="open"
+        x-cloak
+        :style="`top:${dropTop}px;left:${dropLeft}px;width:${dropWidth}px`"
+    >
         @forelse ($options as $course)
         @php
             $callArgs = collect($actionArgs)

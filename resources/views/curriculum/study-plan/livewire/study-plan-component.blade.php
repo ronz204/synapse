@@ -30,7 +30,12 @@
                 </span>
                 <span x-text="row.enrollmentClosingDate ?? '—'"></span>
                 <div class="actions-cell">
-                    <button type="button" class="btn btn-secondary" @click="$wire.viewStructure(row.id)">{{ __('View structure') }}</button>
+                    <button type="button" class="action-icon view" @click="$wire.viewStructure(row.id)" title="{{ __('View structure') }}" aria-label="{{ __('View structure') }}">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                    </button>
                     <x-ui.row-actions
                         :can-edit="Auth::user()->hasPermissionTo('study_plans.edit')"
                         edit-action="$wire.openEditModal(row.id)" />
@@ -52,7 +57,12 @@
             </span>
             <span>{{ $plan->enrollmentClosingDate()?->format('Y-m-d') ?? '—' }}</span>
             <div class="actions-cell">
-                <button type="button" class="btn btn-secondary" wire:click="viewStructure({{ $plan->id() }})">{{ __('View structure') }}</button>
+                <button type="button" class="action-icon view" wire:click="viewStructure({{ $plan->id() }})" title="{{ __('View structure') }}" aria-label="{{ __('View structure') }}">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                </button>
                 <x-ui.row-actions
                     :can-edit="Auth::user()->can('update', $plan)"
                     edit-action="$wire.openEditModal({{ $plan->id() }})" />

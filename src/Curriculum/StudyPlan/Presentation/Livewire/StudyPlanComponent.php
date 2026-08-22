@@ -80,7 +80,13 @@ class StudyPlanComponent extends Component
      */
     public array $structurePrerequisites = [];
 
-    public string $newLevelNumber = '';
+    /**
+     * Which level's card the structure sub-view currently displays — levels
+     * are paginated one-at-a-time (see the level pager in the structure
+     * view) rather than stacked, so a plan with many levels never forces a
+     * long vertical scroll. Null only when the plan has no levels yet.
+     */
+    public ?string $activeLevelKey = null;
 
     /**
      * Per-level "add course" input, keyed by the level's `key`.
@@ -99,13 +105,13 @@ class StudyPlanComponent extends Component
      */
     public array $newCourseSearchByLevel = [];
 
-    public string $newPrerequisiteRequired = '';
-
-    public string $newPrerequisiteDependent = '';
-
-    public string $prerequisiteRequiredSearch = '';
-
-    public string $prerequisiteDependentSearch = '';
+    /**
+     * Which course's inline prerequisite panel is expanded, by course id —
+     * a course can only be linked once per plan in practice, so the course
+     * id alone (not a level-scoped key) identifies the panel regardless of
+     * which level's card it's rendered under.
+     */
+    public ?int $expandedPrerequisiteCourseId = null;
 
     public function mount(): void
     {
@@ -196,26 +202,39 @@ class StudyPlanComponent extends Component
         $this->structureLevels = [];
         $this->structurePrerequisites = [];
         $this->newCourseSearchByLevel = [];
-        $this->prerequisiteRequiredSearch = '';
-        $this->prerequisiteDependentSearch = '';
+        $this->activeLevelKey = null;
+        $this->expandedPrerequisiteCourseId = null;
     }
 
+    /**
+     * The next level's number is always inferred from the last one (highest
+     * `number` currently in the structure, plus one — or 1 for the first
+     * level) rather than typed in: levels are added in order in practice,
+     * and asking for a number the user would almost always just count up
+     * anyway is friction with no payoff.
+     */
     public function addLevel(): void
     {
-        $number = (int) $this->newLevelNumber;
-
-        if ($number < 1) {
-            return;
-        }
+        $key = 'new-'.Str::random(8);
 
         $this->structureLevels[] = [
-            'key' => 'new-'.Str::random(8),
+            'key' => $key,
             'id' => null,
-            'number' => $number,
+            'number' => $this->nextLevelNumber(),
             'courses' => [],
         ];
 
-        $this->newLevelNumber = '';
+        $this->sortLevelsByNumber();
+
+        // Jump the pager to the level just added so it's immediately
+        // visible instead of silently landing off-screen on another page.
+        $this->activeLevelKey = $key;
+        Flux::toast(variant: 'success', text: __('Level added.'));
+    }
+
+    public function nextLevelNumber(): int
+    {
+        return (int) (collect($this->structureLevels)->max('number') ?? 0) + 1;
     }
 
     public function removeLevel(string $levelKey): void
@@ -225,23 +244,55 @@ class StudyPlanComponent extends Component
             fn (array $level) => $level['key'] !== $levelKey,
         ));
 
+        if ($this->activeLevelKey === $levelKey) {
+            $this->activeLevelKey = $this->structureLevels[0]['key'] ?? null;
+        }
+
         // Removing a level can orphan a prerequisite that referenced one of
         // its courses. That is not silently cleaned up here: saveStructure()
         // re-validates every prerequisite against the new level set and
         // rejects the save if one is now dangling, surfacing the exact
         // domain exception instead of quietly dropping it.
+        Flux::toast(variant: 'success', text: __('Level removed.'));
+    }
+
+    public function goToLevel(string $levelKey): void
+    {
+        $this->activeLevelKey = $levelKey;
+    }
+
+    /**
+     * Levels are kept sorted by `number` at all times so the pager and the
+     * "current level" tabs read in the order a user expects (1, 2, 3, ...)
+     * regardless of the order levels were added or loaded in.
+     */
+    private function sortLevelsByNumber(): void
+    {
+        usort($this->structureLevels, fn (array $a, array $b) => $a['number'] <=> $b['number']);
     }
 
     public function addCourseToLevel(string $levelKey): void
     {
         $selection = $this->newCourseSelection[$levelKey] ?? null;
 
-        if (! $selection || ! filled($selection['course_id'] ?? null) || ! filled($selection['credits'] ?? null)) {
+        if (! $selection || ! filled($selection['course_id'] ?? null)) {
+            return;
+        }
+
+        // The credits field is a plain text input (no browser numeric
+        // guard — see the "Credits" field's comment in the view for why),
+        // so this validates what a <input type="number"> used to guarantee
+        // for free: a whole, positive number, nothing else.
+        $rawCredits = (string) ($selection['credits'] ?? '');
+
+        if (! ctype_digit($rawCredits) || (int) $rawCredits < 1) {
+            Flux::toast(variant: 'danger', text: __('Enter a valid number of credits.'));
+
             return;
         }
 
         $courseId = (int) $selection['course_id'];
-        $credits = (int) $selection['credits'];
+        $credits = (int) $rawCredits;
 
         foreach ($this->structureLevels as &$level) {
             if ($level['key'] !== $levelKey) {
@@ -258,6 +309,7 @@ class StudyPlanComponent extends Component
 
         $this->newCourseSelection[$levelKey] = ['course_id' => null, 'credits' => null];
         $this->newCourseSearchByLevel[$levelKey] = '';
+        Flux::toast(variant: 'success', text: __('Course added to level.'));
     }
 
     public function selectCourseForLevel(string $levelKey, int $courseId, string $code, string $name): void
@@ -279,51 +331,44 @@ class StudyPlanComponent extends Component
             ));
         }
         unset($level);
+
+        Flux::toast(variant: 'success', text: __('Course removed from level.'));
     }
 
-    public function addPrerequisite(): void
+    public function togglePrerequisitesFor(int $courseId): void
     {
-        if (! filled($this->newPrerequisiteRequired) || ! filled($this->newPrerequisiteDependent)) {
-            return;
-        }
+        $this->expandedPrerequisiteCourseId = $this->expandedPrerequisiteCourseId === $courseId ? null : $courseId;
+    }
 
-        $required = (int) $this->newPrerequisiteRequired;
-        $dependent = (int) $this->newPrerequisiteDependent;
-
-        if ($required === $dependent) {
+    /**
+     * Adds a prerequisite the course $dependentCourseId depends on. Picking
+     * $requiredCourseId is itself the action — <x-ui.local-course-combobox>
+     * calls this directly the moment a result is clicked, no separate
+     * "confirm" step — and its option list is restricted to courses already
+     * linked to this plan (see linkedCourseInfo()), so every value reaching
+     * here already satisfies StudyPlan::addPrerequisite()'s linked-to-plan
+     * invariant.
+     */
+    public function addPrerequisiteFor(int $dependentCourseId, int $requiredCourseId): void
+    {
+        if ($requiredCourseId === $dependentCourseId) {
             Flux::toast(variant: 'danger', text: __('A course cannot be a prerequisite of itself.'));
 
             return;
         }
 
-        $key = "{$required}-{$dependent}";
+        $key = "{$requiredCourseId}-{$dependentCourseId}";
 
         $alreadyPresent = collect($this->structurePrerequisites)->contains(fn (array $p) => $p['key'] === $key);
 
         if (! $alreadyPresent) {
             $this->structurePrerequisites[] = [
                 'key' => $key,
-                'required_course_id' => $required,
-                'dependent_course_id' => $dependent,
+                'required_course_id' => $requiredCourseId,
+                'dependent_course_id' => $dependentCourseId,
             ];
+            Flux::toast(variant: 'success', text: __('Prerequisite added.'));
         }
-
-        $this->newPrerequisiteRequired = '';
-        $this->newPrerequisiteDependent = '';
-        $this->prerequisiteRequiredSearch = '';
-        $this->prerequisiteDependentSearch = '';
-    }
-
-    public function selectPrerequisiteRequired(int $courseId, string $code, string $name): void
-    {
-        $this->newPrerequisiteRequired = (string) $courseId;
-        $this->prerequisiteRequiredSearch = "{$code} — {$name}";
-    }
-
-    public function selectPrerequisiteDependent(int $courseId, string $code, string $name): void
-    {
-        $this->newPrerequisiteDependent = (string) $courseId;
-        $this->prerequisiteDependentSearch = "{$code} — {$name}";
     }
 
     public function removePrerequisite(string $key): void
@@ -332,6 +377,8 @@ class StudyPlanComponent extends Component
             $this->structurePrerequisites,
             fn (array $p) => $p['key'] !== $key,
         ));
+
+        Flux::toast(variant: 'success', text: __('Prerequisite removed.'));
     }
 
     public function saveStructure(SaveStudyPlanStructureUseCase $useCase, FindStudyPlanUseCase $findUseCase): void
@@ -389,6 +436,9 @@ class StudyPlanComponent extends Component
             $studyPlan->levels(),
         );
 
+        $this->sortLevelsByNumber();
+        $this->activeLevelKey = $this->structureLevels[0]['key'] ?? null;
+
         $this->structurePrerequisites = array_map(
             fn (Prerequisite $p) => [
                 'key' => "{$p->requiredCourseId()}-{$p->dependentCourseId()}",
@@ -399,8 +449,7 @@ class StudyPlanComponent extends Component
         );
 
         $this->newCourseSearchByLevel = [];
-        $this->prerequisiteRequiredSearch = '';
-        $this->prerequisiteDependentSearch = '';
+        $this->expandedPrerequisiteCourseId = null;
     }
 
     // ---------------------------------------------------------------
@@ -463,8 +512,6 @@ class StudyPlanComponent extends Component
             'newCourseOptionsByLevel' => collect($this->structureLevels)
                 ->mapWithKeys(fn (array $level) => [$level['key'] => $this->searchActiveCourses($this->newCourseSearchByLevel[$level['key']] ?? '')])
                 ->all(),
-            'prerequisiteRequiredOptions' => $this->searchActiveCourses($this->prerequisiteRequiredSearch),
-            'prerequisiteDependentOptions' => $this->searchActiveCourses($this->prerequisiteDependentSearch),
         ]);
     }
 

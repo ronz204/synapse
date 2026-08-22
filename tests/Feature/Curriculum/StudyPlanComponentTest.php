@@ -231,6 +231,116 @@ it('saves a valid structure end to end through the component', function (): void
     expect($level->courses()->count())->toBe(2);
 });
 
+it('auto-numbers each newly added level from the highest existing number', function (): void {
+    $user = userWithPermissions(['study_plans.view', 'study_plans.edit']);
+    $program = Program::factory()->create();
+    $plan = StudyPlan::factory()->create(['program_id' => $program->id]);
+
+    $component = Livewire::actingAs($user)
+        ->test(StudyPlanComponent::class)
+        ->call('viewStructure', $plan->id);
+
+    expect($component->get('structureLevels'))->toBe([]);
+
+    $component->call('addLevel')->call('addLevel');
+
+    $levels = $component->get('structureLevels');
+    expect(array_column($levels, 'number'))->toBe([1, 2]);
+    expect($component->get('activeLevelKey'))->toBe($levels[1]['key']);
+});
+
+it('moves the pager to the first remaining level when the active one is removed', function (): void {
+    $user = userWithPermissions(['study_plans.view', 'study_plans.edit']);
+    $program = Program::factory()->create();
+    $plan = StudyPlan::factory()->create(['program_id' => $program->id]);
+
+    $component = Livewire::actingAs($user)
+        ->test(StudyPlanComponent::class)
+        ->call('viewStructure', $plan->id)
+        ->call('addLevel')
+        ->call('addLevel');
+
+    $secondLevelKey = $component->get('structureLevels')[1]['key'];
+
+    $component->call('goToLevel', $secondLevelKey)
+        ->call('removeLevel', $secondLevelKey);
+
+    $remaining = $component->get('structureLevels');
+    expect($remaining)->toHaveCount(1);
+    expect($component->get('activeLevelKey'))->toBe($remaining[0]['key']);
+});
+
+it('adds and removes a course prerequisite through the inline per-course panel', function (): void {
+    $user = userWithPermissions(['study_plans.view', 'study_plans.edit']);
+    $program = Program::factory()->create();
+    $plan = StudyPlan::factory()->create(['program_id' => $program->id]);
+    $courseA = Course::factory()->create(['program_id' => $program->id]);
+    $courseB = Course::factory()->create(['program_id' => $program->id]);
+
+    $component = Livewire::actingAs($user)
+        ->test(StudyPlanComponent::class)
+        ->call('viewStructure', $plan->id)
+        ->set('structureLevels', [
+            ['key' => 'lvl-1', 'id' => null, 'number' => 1, 'courses' => [
+                ['course_id' => $courseA->id, 'credits' => 4],
+                ['course_id' => $courseB->id, 'credits' => 3],
+            ]],
+        ])
+        ->call('togglePrerequisitesFor', $courseB->id);
+
+    expect($component->get('expandedPrerequisiteCourseId'))->toBe($courseB->id);
+
+    $component->call('addPrerequisiteFor', $courseB->id, $courseA->id);
+
+    $prerequisites = $component->get('structurePrerequisites');
+    expect($prerequisites)->toHaveCount(1);
+    expect($prerequisites[0]['required_course_id'])->toBe($courseA->id);
+    expect($prerequisites[0]['dependent_course_id'])->toBe($courseB->id);
+
+    $component->call('removePrerequisite', "{$courseA->id}-{$courseB->id}");
+    expect($component->get('structurePrerequisites'))->toBe([]);
+});
+
+it('rejects a course being set as its own prerequisite from the inline panel', function (): void {
+    $user = userWithPermissions(['study_plans.view', 'study_plans.edit']);
+    $program = Program::factory()->create();
+    $plan = StudyPlan::factory()->create(['program_id' => $program->id]);
+    $course = Course::factory()->create(['program_id' => $program->id]);
+
+    $component = Livewire::actingAs($user)
+        ->test(StudyPlanComponent::class)
+        ->call('viewStructure', $plan->id)
+        ->set('structureLevels', [
+            ['key' => 'lvl-1', 'id' => null, 'number' => 1, 'courses' => [
+                ['course_id' => $course->id, 'credits' => 4],
+            ]],
+        ])
+        ->call('addPrerequisiteFor', $course->id, $course->id)
+        ->assertDispatched('toast-show', dataset: ['variant' => 'danger']);
+
+    expect($component->get('structurePrerequisites'))->toBe([]);
+});
+
+it('rejects a non-numeric or zero credits value when adding a course to a level', function (): void {
+    $user = userWithPermissions(['study_plans.view', 'study_plans.edit']);
+    $program = Program::factory()->create();
+    $plan = StudyPlan::factory()->create(['program_id' => $program->id]);
+    $course = Course::factory()->create(['program_id' => $program->id]);
+
+    $component = Livewire::actingAs($user)
+        ->test(StudyPlanComponent::class)
+        ->call('viewStructure', $plan->id)
+        ->set('structureLevels', [
+            ['key' => 'lvl-1', 'id' => null, 'number' => 1, 'courses' => []],
+        ])
+        ->set('newCourseSelection.lvl-1.course_id', $course->id)
+        ->set('newCourseSelection.lvl-1.credits', 'abc')
+        ->call('addCourseToLevel', 'lvl-1')
+        ->assertDispatched('toast-show', dataset: ['variant' => 'danger']);
+
+    expect($component->get('structureLevels')[0]['courses'])->toBe([]);
+});
+
 it('returns the correct count of currently active students per plan and level', function (): void {
     $program = Program::factory()->create();
     $plan = StudyPlan::factory()->create(['program_id' => $program->id]);
