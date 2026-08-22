@@ -881,6 +881,11 @@ select:focus[data-flux-control] {
         color: var(--color-status-info);
     }
 
+    .action-icon.activate {
+        background: var(--color-status-success-subtle);
+        color: var(--color-status-success);
+    }
+
     .superseded-hint {
         display: block;
         font-size: 11px;
@@ -889,6 +894,17 @@ select:focus[data-flux-control] {
     }
 
     /* ---------- modal chrome ---------- */
+
+    /* Locks background scroll behind any open custom modal or delete
+       confirmation overlay — both are `position: fixed` panels layered
+       over the page, and without this the page underneath still scrolls
+       with the wheel/touch while a modal is open. `:has()` keeps this a
+       single rule that reacts to any Livewire/Alpine component toggling
+       `.open`, instead of every component wiring its own scroll-lock. */
+    body:has(.modal-backdrop.open),
+    body:has(.del-overlay.open) {
+        overflow: hidden;
+    }
 
     .modal-backdrop {
         display: none;
