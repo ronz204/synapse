@@ -141,6 +141,30 @@ it('deactivates rather than deletes a course row', function (): void {
     expect($course->fresh()->active)->toBeFalse();
 });
 
+it('blocks activating a course for a user without courses.delete', function (): void {
+    $user = userWithPermissions(['courses.view']);
+    $program = Program::factory()->create();
+    $course = Course::factory()->create(['program_id' => $program->id, 'active' => false]);
+
+    Livewire::actingAs($user)
+        ->test(CourseComponent::class)
+        ->call('activate', $course->id)
+        ->assertForbidden();
+});
+
+it('reactivates a deactivated course', function (): void {
+    $user = userWithPermissions(['courses.view', 'courses.delete']);
+    $program = Program::factory()->create();
+    $course = Course::factory()->create(['program_id' => $program->id, 'active' => false]);
+
+    Livewire::actingAs($user)
+        ->test(CourseComponent::class)
+        ->call('activate', $course->id)
+        ->assertOk();
+
+    expect($course->fresh()->active)->toBeTrue();
+});
+
 it('persists every editable field when a course is edited, including its code', function (): void {
     $user = userWithPermissions(['courses.view', 'courses.create', 'courses.edit']);
     $program = Program::factory()->create();

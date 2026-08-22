@@ -43,6 +43,15 @@ class CoursePolicy
         return $user->hasPermissionTo('courses.delete');
     }
 
+    /**
+     * Reactivation is the inverse of delete (deactivate), so it is gated by
+     * the same permission tier rather than a dedicated one.
+     */
+    public function activate(User $user, Course $course): bool
+    {
+        return $user->hasPermissionTo('courses.delete');
+    }
+
     public function exportPdf(User $user): bool
     {
         return $user->hasPermissionTo('courses.export_pdf');

@@ -16,6 +16,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
+use Src\Curriculum\Course\Application\UseCases\ActivateCourseUseCase;
 use Src\Curriculum\Course\Application\UseCases\CreateCourseUseCase;
 use Src\Curriculum\Course\Application\UseCases\DeactivateCourseUseCase;
 use Src\Curriculum\Course\Application\UseCases\FindCourseUseCase;
@@ -130,6 +131,20 @@ class CourseComponent extends Component
 
         $this->refreshTable($this->freshRows($listUseCase));
         Flux::toast(variant: 'success', text: __('Course deactivated.'));
+    }
+
+    /**
+     * Reverses a prior `delete` (deactivation): flips the course's `active`
+     * flag back on. Never creates a new row — the course was never deleted.
+     */
+    public function activate(int $id, ActivateCourseUseCase $useCase, ListCoursesUseCase $listUseCase, FindCourseUseCase $findUseCase): void
+    {
+        $this->authorize('activate', $findUseCase->handle($id));
+
+        $useCase->handle($id);
+
+        $this->refreshTable($this->freshRows($listUseCase));
+        Flux::toast(variant: 'success', text: __('Course activated.'));
     }
 
     public function exportPdf(ListCoursesUseCase $useCase, ?string $search = null): void
