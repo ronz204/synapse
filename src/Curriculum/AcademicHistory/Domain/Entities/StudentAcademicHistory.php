@@ -11,12 +11,9 @@ use Src\Curriculum\AcademicHistory\Domain\ValueObjects\StudentSummary;
  * A student's simplified internal academic history — the artifact RC-02b
  * names as its output.
  *
- * Read-only by construction: this slice exists to make an existing history
- * legible, never to alter it. Accreditations are written by the
- * Accreditation context reacting to an equivalency becoming active, and a
- * record is only ever produced there, so no mutating operation belongs on
- * this entity. There is a single `reconstitute()` and no `create()` for the
- * same reason.
+ * Read-only by construction: this entity is the query projection. Passed
+ * inputs go through a dedicated application command, and accreditations are
+ * written by the Accreditation context, so neither mutation belongs here.
  */
 final class StudentAcademicHistory
 {
