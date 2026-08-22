@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Enums\AcademicRecordStatus;
+use App\Enums\EquivalencyDirection;
 use App\Models\Course;
 use App\Models\Equivalency;
 use App\Models\Student;
@@ -149,4 +150,107 @@ it('reads a history straight from the use case, without going through the compon
     expect($history->entries()[0]->courseCode)->toBe('HIST-303');
     expect($history->entries()[0]->resolutionNumber)->toBe('R-HIST-303');
     expect($history->accreditedByEquivalency())->toHaveCount(1);
+});
+
+it('records a passed course from the history and applies its valid equivalency', function (): void {
+    $user = userWithPermissions(['academic_records.view', 'academic_records.create']);
+    $student = Student::factory()->create();
+    $source = Course::factory()->create(['code' => 'INPUT-OLD', 'name' => 'Input source']);
+    $target = Course::factory()->create(['code' => 'INPUT-NEW', 'name' => 'Input target']);
+
+    Equivalency::factory()->create([
+        'source_course_id' => $source->id,
+        'target_course_id' => $target->id,
+        'direction' => EquivalencyDirection::OldToNew,
+        'resolution_number' => 'INPUT-RES-001',
+    ]);
+
+    Livewire::actingAs($user)
+        ->test(AcademicHistoryComponent::class)
+        ->call('viewHistory', $student->id)
+        ->call('openPassedCourseModal')
+        ->call('selectCourse', $source->id, $source->code, $source->name)
+        ->call('recordPassedCourse')
+        ->assertHasNoErrors()
+        ->assertSet('showModal', false)
+        ->assertSee('INPUT-OLD')
+        ->assertSee('INPUT-NEW')
+        ->assertSee('INPUT-RES-001');
+
+    expect(StudentAcademicRecord::query()
+        ->where('student_id', $student->id)
+        ->where('course_id', $source->id)
+        ->where('status', AcademicRecordStatus::Passed)
+        ->exists())->toBeTrue();
+
+    expect(StudentAcademicRecord::query()
+        ->where('student_id', $student->id)
+        ->where('course_id', $target->id)
+        ->where('status', AcademicRecordStatus::AccreditedByEquivalency)
+        ->exists())->toBeTrue();
+});
+
+it('requires create permission to open the passed-course input', function (): void {
+    $user = userWithPermissions(['academic_records.view']);
+    $student = Student::factory()->create();
+
+    Livewire::actingAs($user)
+        ->test(AcademicHistoryComponent::class)
+        ->call('viewHistory', $student->id)
+        ->call('openPassedCourseModal')
+        ->assertForbidden();
+});
+
+it('does not accredit in reverse when the passed course is entered from the history', function (): void {
+    $user = userWithPermissions(['academic_records.view', 'academic_records.create']);
+    $student = Student::factory()->create();
+    $source = Course::factory()->create(['code' => 'INPUT-REVERSE-OLD']);
+    $target = Course::factory()->create(['code' => 'INPUT-REVERSE-NEW']);
+
+    Equivalency::factory()->create([
+        'source_course_id' => $source->id,
+        'target_course_id' => $target->id,
+        'direction' => EquivalencyDirection::OldToNew,
+    ]);
+
+    Livewire::actingAs($user)
+        ->test(AcademicHistoryComponent::class)
+        ->call('viewHistory', $student->id)
+        ->call('openPassedCourseModal')
+        ->call('selectCourse', $target->id, $target->code, $target->name)
+        ->call('recordPassedCourse')
+        ->assertHasNoErrors()
+        ->assertSee('INPUT-REVERSE-NEW')
+        ->assertDontSee('INPUT-REVERSE-OLD');
+
+    expect(StudentAcademicRecord::query()
+        ->where('student_id', $student->id)
+        ->where('course_id', $source->id)
+        ->exists())->toBeFalse();
+});
+
+it('does not duplicate a course the student already passed', function (): void {
+    $user = userWithPermissions(['academic_records.view', 'academic_records.create']);
+    $student = Student::factory()->create();
+    $course = Course::factory()->create(['code' => 'INPUT-DUP']);
+
+    StudentAcademicRecord::query()->create([
+        'student_id' => $student->id,
+        'course_id' => $course->id,
+        'status' => AcademicRecordStatus::Passed,
+    ]);
+
+    Livewire::actingAs($user)
+        ->test(AcademicHistoryComponent::class)
+        ->call('viewHistory', $student->id)
+        ->call('openPassedCourseModal')
+        ->call('selectCourse', $course->id, $course->code, $course->name)
+        ->call('recordPassedCourse')
+        ->assertHasErrors(['form.courseId'])
+        ->assertSet('showModal', true);
+
+    expect(StudentAcademicRecord::query()
+        ->where('student_id', $student->id)
+        ->where('course_id', $course->id)
+        ->count())->toBe(1);
 });

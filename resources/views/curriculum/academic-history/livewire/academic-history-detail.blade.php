@@ -16,6 +16,9 @@
                 </div>
             </div>
             <div class="card-actions">
+                @can('create', \Src\Curriculum\AcademicHistory\Domain\Entities\StudentAcademicHistory::class)
+                <button type="button" class="btn btn-orange" wire:click="openPassedCourseModal">{{ __('Add passed course') }}</button>
+                @endcan
                 <button type="button" class="btn btn-secondary" wire:click="backToStudents">{{ __('Back to students') }}</button>
             </div>
         </div>
@@ -52,4 +55,28 @@
             </div>
         </div>
     </div>
+
+    <x-ui.modal :show="$showModal" :title="__('Add passed course')">
+        <div class="form-field">
+            <label for="academicHistoryCourse">{{ __('Course') }}</label>
+            <x-ui.course-combobox
+                id="academicHistoryCourse"
+                search-property="courseSearch"
+                select-action="selectCourse"
+                :options="$courseOptions"
+                :has-error="$errors->has('form.courseId')"
+            />
+            @error('form.courseId') <span class="form-error">{{ $message }}</span> @enderror
+        </div>
+
+        <div class="form-field">
+            <label>{{ __('Status') }}</label>
+            <input type="text" value="{{ __('Passed') }}" disabled>
+        </div>
+
+        <x-slot:footer>
+            <button type="button" class="btn btn-secondary" wire:click="closeModal">{{ __('Cancel') }}</button>
+            <button type="button" class="btn btn-primary" wire:click="recordPassedCourse">{{ __('Save') }}</button>
+        </x-slot:footer>
+    </x-ui.modal>
 </div>

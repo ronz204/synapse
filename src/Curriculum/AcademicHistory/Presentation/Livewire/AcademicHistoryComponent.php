@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace Src\Curriculum\AcademicHistory\Presentation\Livewire;
 
+use App\Livewire\Concerns\InteractsWithCourseSearch;
 use App\Livewire\Concerns\InteractsWithDataTable;
+use Flux\Flux;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -12,7 +14,10 @@ use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Src\Curriculum\AcademicHistory\Application\UseCases\GetStudentAcademicHistoryUseCase;
 use Src\Curriculum\AcademicHistory\Application\UseCases\ListStudentsUseCase;
+use Src\Curriculum\AcademicHistory\Application\UseCases\RecordPassedCourseUseCase;
 use Src\Curriculum\AcademicHistory\Domain\Entities\StudentAcademicHistory;
+use Src\Curriculum\AcademicHistory\Domain\Exceptions\CourseAlreadySatisfiedException;
+use Src\Curriculum\AcademicHistory\Presentation\Livewire\Forms\PassedCourseForm;
 
 /**
  * Two screens behind one component, the same shape StudyPlanComponent uses:
@@ -27,6 +32,7 @@ use Src\Curriculum\AcademicHistory\Domain\Entities\StudentAcademicHistory;
 class AcademicHistoryComponent extends Component
 {
     use AuthorizesRequests;
+    use InteractsWithCourseSearch;
     use InteractsWithDataTable;
 
     protected string $tableMode = 'server';
@@ -36,6 +42,12 @@ class AcademicHistoryComponent extends Component
      * history.
      */
     public ?int $viewingStudentId = null;
+
+    public bool $showModal = false;
+
+    public string $courseSearch = '';
+
+    public PassedCourseForm $form;
 
     public function mount(): void
     {
@@ -60,7 +72,48 @@ class AcademicHistoryComponent extends Component
 
     public function backToStudents(): void
     {
+        $this->closeModal();
         $this->viewingStudentId = null;
+    }
+
+    public function openPassedCourseModal(): void
+    {
+        $this->authorize('create', StudentAcademicHistory::class);
+        abort_if($this->viewingStudentId === null, 404);
+
+        $this->form->reset();
+        $this->courseSearch = '';
+        $this->resetValidation();
+        $this->showModal = true;
+    }
+
+    public function selectCourse(int $courseId, string $code, string $name): void
+    {
+        $this->form->courseId = $courseId;
+        $this->courseSearch = $code.' - '.$name;
+    }
+
+    public function closeModal(): void
+    {
+        $this->showModal = false;
+    }
+
+    public function recordPassedCourse(RecordPassedCourseUseCase $useCase): void
+    {
+        $this->authorize('create', StudentAcademicHistory::class);
+        abort_if($this->viewingStudentId === null, 404);
+        $this->form->validate();
+
+        try {
+            $useCase->handle($this->viewingStudentId, (int) $this->form->courseId);
+        } catch (CourseAlreadySatisfiedException) {
+            $this->addError('form.courseId', __('This student already has a passing outcome for the selected course.'));
+
+            return;
+        }
+
+        $this->showModal = false;
+        Flux::toast(variant: 'success', text: __('Passed course recorded.'));
     }
 
     public function render(ListStudentsUseCase $useCase, GetStudentAcademicHistoryUseCase $historyUseCase): View
@@ -68,6 +121,7 @@ class AcademicHistoryComponent extends Component
         if ($this->viewingStudentId !== null) {
             return view('curriculum.academic-history.livewire.academic-history-detail', [
                 'history' => $historyUseCase->handle($this->viewingStudentId),
+                'courseOptions' => $this->searchActiveCourses($this->courseSearch),
             ]);
         }
 

@@ -8,10 +8,9 @@ use Src\Curriculum\AcademicHistory\Domain\Entities\StudentAcademicHistory;
 use Src\Curriculum\AcademicHistory\Domain\ValueObjects\StudentSummary;
 
 /**
- * The port this slice depends on. Read-only on purpose: the history is
- * written by the Accreditation context, and offering a save() here would
- * hand callers a second, unguarded way to alter records that RC-02b's
- * invariants are enforced on.
+ * Read-only projection port. Commands use the narrower
+ * AcademicRecordWriteRepositoryInterface, while accreditation outcomes remain
+ * owned by the Accreditation context.
  *
  * Only `paginateStudents()` is offered for the listing — no `all()` — because
  * the student table is the largest in the system and loading it whole into
