@@ -1213,11 +1213,35 @@ select:focus[data-flux-control] {
 
        Server-searched replacement for a plain <select> full of every active
        course — see App\Livewire\Concerns\InteractsWithCourseSearch. The
-       input reuses .form-field's own input styling (it's just a text
-       input); only the dropdown panel below it needs its own rules. */
+       input styles itself here rather than relying on `.form-field input`
+       — this component gets dropped into plain `.card-controls`/`.prereq-
+       panel` rows just as often as it does a `.form-field`, and without an
+       explicit background it inherits transparent + light text, which
+       reads as nearly invisible against those panels' own dark surfaces. */
 
     .course-combobox {
         position: relative;
+    }
+
+    .course-combobox input[type="text"] {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 8px;
+        border: 1px solid var(--color-border-default);
+        background: var(--color-background-surface);
+        color: var(--color-text-primary);
+        font-size: 13.5px;
+        font-family: inherit;
+    }
+
+    .course-combobox input[type="text"]:focus {
+        outline: none;
+        border-color: var(--color-border-brand);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-border-brand) 12%, transparent);
+    }
+
+    .course-combobox input.has-error {
+        border-color: var(--color-status-danger);
     }
 
     .course-combobox-results {
