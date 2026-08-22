@@ -69,9 +69,9 @@ class PermissionSeeder extends Seeder
             'study_plans' => ['view', 'search', 'create', 'edit', 'export_pdf', 'export_excel'],
             'equivalencies' => ['view', 'search', 'create', 'resolve_contradiction', 'export_pdf', 'export_excel'],
             'modality_resolutions' => ['view', 'search', 'create', 'export_pdf', 'export_excel'],
-            // Read-only slice: the history is written by the Accreditation
-            // context reacting to an equivalency, never from its own screen.
-            'academic_records' => ['view', 'search'],
+            // Create is limited to manually recording a Passed input. The
+            // Accreditation context remains the only writer of grants.
+            'academic_records' => ['view', 'search', 'create'],
         ];
 
         $actionDescriptions = [
