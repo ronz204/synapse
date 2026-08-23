@@ -108,11 +108,11 @@ final class EloquentDashboardReadRepository implements DashboardReadRepositoryIn
             ->limit($limit)
             ->get()
             ->map(fn ($row) => new ActiveStudentsByLevelData(
-                studyPlanId: (int) $row->study_plan_id,
-                studyPlan: (string) $row->study_plan,
-                program: (string) $row->program,
-                level: (int) $row->level,
-                activeStudents: (int) $row->active_students,
+                studyPlanId: (int) $row->getAttribute('study_plan_id'),
+                studyPlan: (string) $row->getAttribute('study_plan'),
+                program: (string) $row->getAttribute('program'),
+                level: (int) $row->getAttribute('level'),
+                activeStudents: (int) $row->getAttribute('active_students'),
             ))
             ->all();
     }
