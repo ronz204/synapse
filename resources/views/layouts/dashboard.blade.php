@@ -15,17 +15,8 @@
         dark: document.documentElement.classList.contains('dark'),
 
         fontLevel: localStorage.getItem('fontLevel') || 'a',
-        currentSection: 'panel',
-        currentSub: '',
-
         init() {
             this.updateZoom(this.fontLevel);
-        },
-
-        setSection(key, subKey = '') {
-            this.currentSection = key;
-            this.currentSub = subKey;
-            if (window.innerWidth < 760) this.mobileOpen = false;
         },
 
         toggleDark() {
@@ -51,7 +42,7 @@
             const zoom = level === 'aaa' ? 1.3 : level === 'aa' ? 1.15 : 1;
             document.documentElement.style.setProperty('--font-zoom', zoom);
         }
-    }" x-on:livewire:navigated.window="currentSection = ''; currentSub = ''">
+    }">
 
         <div class="backdrop" :class="{ 'show': mobileOpen }" @click="mobileOpen = false"></div>
 
