@@ -28,6 +28,23 @@ test('authenticated users can visit the dashboard', function () {
     $response->assertOk();
 });
 
+test('sidebar only exposes implemented modules', function () {
+    $response = $this->actingAs(User::factory()->create())->get(route('dashboard'));
+
+    $response->assertOk()
+        ->assertSee(__('Courses'))
+        ->assertSee(__('Study Plans'))
+        ->assertSee(__('Equivalencies'))
+        ->assertSee(__('Academic History'))
+        ->assertSee(__('Modalities'))
+        ->assertDontSee(__('Academic Offer'))
+        ->assertDontSee(__('Teachers'))
+        ->assertDontSee(__('Classrooms'))
+        ->assertDontSee(__('Groups'))
+        ->assertDontSee(__('Risks'))
+        ->assertDontSee(__('Reports'));
+});
+
 test('dashboard summarizes curriculum data and active students by plan and level', function () {
     $program = Program::factory()->create(['name' => 'Software Engineering']);
     $activePlan = StudyPlan::factory()->for($program)->create(['name' => 'Plan 2026']);
