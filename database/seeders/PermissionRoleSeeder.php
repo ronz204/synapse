@@ -33,7 +33,7 @@ class PermissionRoleSeeder extends Seeder
         $modalityResolutionPermissions = ['modality_resolutions.view', 'modality_resolutions.search', 'modality_resolutions.create', 'modality_resolutions.export_pdf', 'modality_resolutions.export_excel'];
         // RC-02b's history is the readable side of the equivalencies these
         // same three roles already register, so it follows the same grant.
-        $academicRecordPermissions = ['academic_records.view', 'academic_records.search'];
+        $academicRecordPermissions = ['academic_records.view', 'academic_records.search', 'academic_records.create'];
 
         $matrix = [
             'Administrador' => [
