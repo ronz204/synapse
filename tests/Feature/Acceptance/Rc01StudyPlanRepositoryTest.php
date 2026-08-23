@@ -90,6 +90,8 @@ it('RC-01 AC3 — a prerequisite citing a course that does not exist in the plan
     $linked = Course::factory()->create(['program_id' => $program->id]);
     $notInPlan = Course::factory()->create(['program_id' => $program->id]);
 
+    $expectedMessage = __('A course used in a prerequisite must exist within the same study plan.');
+
     Livewire::actingAs($user)
         ->test(StudyPlanComponent::class)
         ->call('viewStructure', $plan->id)
@@ -106,7 +108,13 @@ it('RC-01 AC3 — a prerequisite citing a course that does not exist in the plan
             ],
         ])
         ->call('saveStructure')
-        ->assertDispatched('toast-show', dataset: ['variant' => 'danger']);
+        ->assertHasErrors(['structurePrerequisites'])
+        ->assertSee($expectedMessage)
+        ->assertDispatched(
+            'toast-show',
+            dataset: ['variant' => 'danger'],
+            slots: ['text' => $expectedMessage],
+        );
 
     // Blocked, not merely flagged: nothing at all was written for this plan.
     expect(Prerequisite::query()->where('study_plan_id', $plan->id)->count())->toBe(0);

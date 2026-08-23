@@ -385,6 +385,7 @@ class StudyPlanComponent extends Component
     {
         $current = $findUseCase->handle($this->viewingPlanId);
         $this->authorize('update', $current);
+        $this->resetValidation('structurePrerequisites');
 
         $levelDtos = array_map(
             fn (array $level) => new LevelDTO(
@@ -405,10 +406,10 @@ class StudyPlanComponent extends Component
         try {
             $updated = $useCase->handle($this->viewingPlanId, new StudyPlanStructureDTO($levelDtos, $prerequisiteDtos));
         } catch (PrerequisiteCourseNotLinkedToPlanException) {
-            // Same reasoning as the TerminalPlanRequiresClosingDateException
-            // catch above: the domain message stays English/framework-free,
-            // the presentation layer supplies the translated text.
-            Flux::toast(variant: 'danger', text: __('Both courses of a prerequisite must be linked to a level of this study plan.'));
+            $message = __('A course used in a prerequisite must exist within the same study plan.');
+
+            $this->addError('structurePrerequisites', $message);
+            Flux::toast(variant: 'danger', text: $message);
 
             return;
         } catch (PrerequisiteCoursesMustDifferException) {
