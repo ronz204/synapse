@@ -41,6 +41,8 @@ use Src\Curriculum\StudyPlan\Domain\Contracts\StudyPlanRepositoryInterface;
 use Src\Curriculum\StudyPlan\Domain\Entities\StudyPlan;
 use Src\Curriculum\StudyPlan\Infrastructure\Persistence\Repositories\EloquentStudyPlanRepository;
 use Src\Curriculum\StudyPlan\Presentation\Policies\StudyPlanPolicy;
+use Src\Dashboard\Application\Contracts\DashboardReadRepositoryInterface;
+use Src\Dashboard\Infrastructure\Persistence\Repositories\EloquentDashboardReadRepository;
 use Src\IdentityAccess\Permission\Domain\Contracts\PermissionRepositoryInterface;
 use Src\IdentityAccess\Permission\Domain\Entities\Permission;
 use Src\IdentityAccess\Permission\Infrastructure\Persistence\Repositories\EloquentPermissionRepository;
@@ -79,6 +81,7 @@ final class DomainServiceProvider extends ServiceProvider
         ModalityResolutionRepositoryInterface::class => EloquentModalityResolutionRepository::class,
         AcademicHistoryRepositoryInterface::class => EloquentAcademicHistoryRepository::class,
         AcademicRecordWriteRepositoryInterface::class => EloquentAcademicRecordWriteRepository::class,
+        DashboardReadRepositoryInterface::class => EloquentDashboardReadRepository::class,
 
         // Shared, entity-agnostic capabilities rather than per-context ports:
         // turning rows into a file, or attaching a document to whatever owns
