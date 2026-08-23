@@ -48,6 +48,11 @@
                 @endif
             </div>
         </div>
+        @error('structurePrerequisites')
+        <div class="card-controls">
+            <flux:error name="structurePrerequisites" />
+        </div>
+        @enderror
     </div>
 
     @if ($canEditPlan)

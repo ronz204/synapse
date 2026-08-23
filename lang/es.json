@@ -286,6 +286,7 @@
   "Prerequisite added.": "Prerrequisito agregado.",
   "Prerequisite removed.": "Prerrequisito eliminado.",
   "A course cannot be a prerequisite of itself.": "Un curso no puede ser prerrequisito de sí mismo.",
+  "A course used in a prerequisite must exist within the same study plan.": "El curso usado como requisito debe existir dentro del mismo plan de estudio.",
   "Both courses of a prerequisite must be linked to a level of this study plan.": "Ambos cursos de un prerrequisito deben estar vinculados a un nivel de este plan de estudio.",
   "A study plan classified as Terminal must have an enrollment closing date.": "Un plan de estudio clasificado como Terminal debe tener una fecha de cierre de matrícula.",
   "Study plan created.": "Plan de estudio creado.",

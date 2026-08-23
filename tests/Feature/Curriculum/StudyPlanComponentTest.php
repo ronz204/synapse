@@ -162,6 +162,8 @@ it('blocks a prerequisite whose course is not linked to the plan', function (): 
     $linkedCourse = Course::factory()->create(['program_id' => $program->id]);
     $unlinkedCourse = Course::factory()->create(['program_id' => $program->id]);
 
+    $expectedMessage = __('A course used in a prerequisite must exist within the same study plan.');
+
     Livewire::actingAs($user)
         ->test(StudyPlanComponent::class)
         ->call('viewStructure', $plan->id)
@@ -174,7 +176,13 @@ it('blocks a prerequisite whose course is not linked to the plan', function (): 
             ['key' => "{$linkedCourse->id}-{$unlinkedCourse->id}", 'required_course_id' => $linkedCourse->id, 'dependent_course_id' => $unlinkedCourse->id],
         ])
         ->call('saveStructure')
-        ->assertDispatched('toast-show', dataset: ['variant' => 'danger']);
+        ->assertHasErrors(['structurePrerequisites'])
+        ->assertSee($expectedMessage)
+        ->assertDispatched(
+            'toast-show',
+            dataset: ['variant' => 'danger'],
+            slots: ['text' => $expectedMessage],
+        );
 
     expect(Prerequisite::query()->where('study_plan_id', $plan->id)->count())->toBe(0);
 });
