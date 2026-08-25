@@ -10,6 +10,18 @@
     $activeIndex = $activeLevel ? collect($orderedLevels)->search(fn ($lvl) => $lvl['key'] === $activeLevel['key']) : null;
     $totalLevels = count($orderedLevels);
 
+    // A prerequisite's required course must belong to a strictly earlier
+    // level than the dependent course's (StudyPlan::addPrerequisite()'s
+    // level-order invariant) — so the "add a required course" picker for
+    // any course in $activeLevel only ever offers courses already linked
+    // to a level numbered below $activeLevel['number'].
+    $earlierLevelCourseIds = $activeLevel
+        ? collect($orderedLevels)
+            ->filter(fn ($level) => $level['number'] < $activeLevel['number'])
+            ->flatMap(fn ($level) => collect($level['courses'])->pluck('course_id'))
+            ->unique()
+        : collect();
+
     // Same compact-with-ellipsis page set <x-ui.data-table> builds for its
     // own server-mode pager (first two, last two, and the active level's
     // immediate neighbours) — a plan with 20+ levels would otherwise render
@@ -183,7 +195,8 @@
                 @if ($isExpanded)
                 @php
                     $availableRequiredOptions = collect($linkedCourseInfo)
-                        ->reject(fn ($course) => $course['id'] === $courseLink['course_id'] || $requiredCourseIds->contains($course['id']))
+                        ->filter(fn ($course) => $earlierLevelCourseIds->contains($course['id']))
+                        ->reject(fn ($course) => $requiredCourseIds->contains($course['id']))
                         ->values();
                 @endphp
                 <div class="prereq-panel" wire:key="prereq-panel-{{ $activeLevel['key'] }}-{{ $courseLink['course_id'] }}">
@@ -215,7 +228,7 @@
                                     style="width: 100%;"
                                 />
                                 @else
-                                <p class="prereq-empty">{{ __('No other linked course is available to set as a prerequisite yet.') }}</p>
+                                <p class="prereq-empty">{{ __('No course from an earlier level of this plan is available yet to set as a prerequisite.') }}</p>
                                 @endif
                             @endif
                         </div>

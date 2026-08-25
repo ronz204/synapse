@@ -8,6 +8,7 @@ use Src\Curriculum\StudyPlan\Domain\Entities\Level;
 use Src\Curriculum\StudyPlan\Domain\Entities\StudyPlan;
 use Src\Curriculum\StudyPlan\Domain\Exceptions\PrerequisiteCourseNotLinkedToPlanException;
 use Src\Curriculum\StudyPlan\Domain\Exceptions\PrerequisiteCoursesMustDifferException;
+use Src\Curriculum\StudyPlan\Domain\Exceptions\PrerequisiteRequiredCourseMustBeInEarlierLevelException;
 use Src\Curriculum\StudyPlan\Domain\Exceptions\TerminalPlanRequiresClosingDateException;
 
 it('rejects a Terminal plan with no enrollment closing date', function (): void {
@@ -85,6 +86,45 @@ it('accepts a prerequisite whose courses are both linked to this plan', function
     expect($plan->prerequisites()[0]->requiredCourseId())->toBe(10);
     expect($plan->prerequisites()[0]->dependentCourseId())->toBe(20);
 });
+
+it('rejects a prerequisite whose required course is not in a strictly earlier level than the dependent course', function (): void {
+    $plan = studyPlanWithLevels([
+        Level::reconstitute(1, 1, [new CourseLink(courseId: 10, credits: 4)]),
+        Level::reconstitute(2, 2, [new CourseLink(courseId: 20, credits: 4)]),
+    ]);
+
+    // 20 is in level 2, 10 is in level 1 — the required course (20) is not
+    // earlier than the dependent course (10), so this must be rejected.
+    $plan->addPrerequisite(requiredCourseId: 20, dependentCourseId: 10);
+})->throws(PrerequisiteRequiredCourseMustBeInEarlierLevelException::class);
+
+it('rejects a prerequisite between two courses in the same level', function (): void {
+    $plan = studyPlanWithLevels([
+        Level::reconstitute(1, 1, [
+            new CourseLink(courseId: 10, credits: 4),
+            new CourseLink(courseId: 11, credits: 4),
+        ]),
+    ]);
+
+    $plan->addPrerequisite(requiredCourseId: 10, dependentCourseId: 11);
+})->throws(PrerequisiteRequiredCourseMustBeInEarlierLevelException::class);
+
+it('rejects a mutual prerequisite between two courses that would otherwise form a 2-node cycle', function (): void {
+    // Without the level-order rule this would let A require B and B
+    // require A — a cycle that makes the plan impossible to complete.
+    // Enforcing "required course's level < dependent course's level"
+    // rules this out structurally: whichever edge is added second always
+    // fails, because it would need its required course's level to be both
+    // lower and higher than the other course's level.
+    $plan = studyPlanWithLevels([
+        Level::reconstitute(1, 1, [new CourseLink(courseId: 10, credits: 4)]),
+        Level::reconstitute(2, 2, [new CourseLink(courseId: 20, credits: 4)]),
+    ]);
+
+    $plan->addPrerequisite(requiredCourseId: 10, dependentCourseId: 20);
+
+    $plan->addPrerequisite(requiredCourseId: 20, dependentCourseId: 10);
+})->throws(PrerequisiteRequiredCourseMustBeInEarlierLevelException::class);
 
 it('never evaluates prerequisite scoping against a stale level set', function (): void {
     // Course 20 starts out linked, so this prerequisite would be valid...
