@@ -8,6 +8,7 @@ use App\Enums\PlanClassification;
 use DateTimeImmutable;
 use Src\Curriculum\StudyPlan\Domain\Exceptions\PrerequisiteCourseNotLinkedToPlanException;
 use Src\Curriculum\StudyPlan\Domain\Exceptions\PrerequisiteCoursesMustDifferException;
+use Src\Curriculum\StudyPlan\Domain\Exceptions\PrerequisiteRequiredCourseMustBeInEarlierLevelException;
 use Src\Curriculum\StudyPlan\Domain\Exceptions\TerminalPlanRequiresClosingDateException;
 
 /**
@@ -142,6 +143,13 @@ final class StudyPlan
      * the system. Because Course is reusable across plans, this check is
      * always evaluated against this instance's own levels — never cached,
      * never assumed from another plan.
+     *
+     * The required course must also belong to a strictly earlier level than
+     * the dependent course's — a student must be able to have already
+     * passed it by the time the dependent course's level is reached. This
+     * also rules out mutual/cyclic prerequisites by construction: any cycle
+     * would require a level number to both strictly increase and return to
+     * its starting value along the chain, which is impossible.
      */
     public function addPrerequisite(int $requiredCourseId, int $dependentCourseId): void
     {
@@ -149,22 +157,34 @@ final class StudyPlan
             throw PrerequisiteCoursesMustDifferException::forCourse($requiredCourseId);
         }
 
-        if (! $this->isCourseLinked($requiredCourseId) || ! $this->isCourseLinked($dependentCourseId)) {
+        $requiredLevelNumber = $this->levelNumberForCourse($requiredCourseId);
+        $dependentLevelNumber = $this->levelNumberForCourse($dependentCourseId);
+
+        if ($requiredLevelNumber === null || $dependentLevelNumber === null) {
             throw PrerequisiteCourseNotLinkedToPlanException::forCourses($requiredCourseId, $dependentCourseId);
+        }
+
+        if ($requiredLevelNumber >= $dependentLevelNumber) {
+            throw PrerequisiteRequiredCourseMustBeInEarlierLevelException::forCourses(
+                $requiredCourseId,
+                $dependentCourseId,
+                $requiredLevelNumber,
+                $dependentLevelNumber,
+            );
         }
 
         $this->prerequisites[] = Prerequisite::create($requiredCourseId, $dependentCourseId);
     }
 
-    private function isCourseLinked(int $courseId): bool
+    private function levelNumberForCourse(int $courseId): ?int
     {
         foreach ($this->levels as $level) {
             if ($level->linksCourse($courseId)) {
-                return true;
+                return $level->number();
             }
         }
 
-        return false;
+        return null;
     }
 
     public function id(): ?int

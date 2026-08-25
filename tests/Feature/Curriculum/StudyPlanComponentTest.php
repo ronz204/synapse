@@ -187,6 +187,45 @@ it('blocks a prerequisite whose course is not linked to the plan', function (): 
     expect(Prerequisite::query()->where('study_plan_id', $plan->id)->count())->toBe(0);
 });
 
+it('blocks saving a prerequisite whose required course is not in an earlier level than the dependent course', function (): void {
+    $user = userWithPermissions(['study_plans.view', 'study_plans.edit']);
+    $program = Program::factory()->create();
+    $plan = StudyPlan::factory()->create(['program_id' => $program->id]);
+    $courseA = Course::factory()->create(['program_id' => $program->id]);
+    $courseB = Course::factory()->create(['program_id' => $program->id]);
+
+    $expectedMessage = __('A prerequisite course must belong to an earlier level of this plan than the course it is required for.');
+
+    Livewire::actingAs($user)
+        ->test(StudyPlanComponent::class)
+        ->call('viewStructure', $plan->id)
+        ->set('structureLevels', [
+            ['key' => 'lvl-1', 'id' => null, 'number' => 1, 'courses' => [
+                ['course_id' => $courseA->id, 'credits' => 4],
+            ]],
+            ['key' => 'lvl-2', 'id' => null, 'number' => 2, 'courses' => [
+                ['course_id' => $courseB->id, 'credits' => 3],
+            ]],
+        ])
+        ->set('structurePrerequisites', [
+            // Reversed: courseB (level 2) as required, courseA (level 1) as
+            // dependent — set directly on the component's array state to
+            // bypass addPrerequisiteFor()'s own guard and exercise the
+            // domain-level rejection path at save time.
+            ['key' => "{$courseB->id}-{$courseA->id}", 'required_course_id' => $courseB->id, 'dependent_course_id' => $courseA->id],
+        ])
+        ->call('saveStructure')
+        ->assertHasErrors(['structurePrerequisites'])
+        ->assertSee($expectedMessage)
+        ->assertDispatched(
+            'toast-show',
+            dataset: ['variant' => 'danger'],
+            slots: ['text' => $expectedMessage],
+        );
+
+    expect(Prerequisite::query()->where('study_plan_id', $plan->id)->count())->toBe(0);
+});
+
 it('blocks a prerequisite where required and dependent are the same course', function (): void {
     $user = userWithPermissions(['study_plans.view', 'study_plans.edit']);
     $program = Program::factory()->create();
@@ -223,6 +262,8 @@ it('saves a valid structure end to end through the component', function (): void
         ->set('structureLevels', [
             ['key' => 'lvl-1', 'id' => null, 'number' => 1, 'courses' => [
                 ['course_id' => $courseA->id, 'credits' => 4],
+            ]],
+            ['key' => 'lvl-2', 'id' => null, 'number' => 2, 'courses' => [
                 ['course_id' => $courseB->id, 'credits' => 3],
             ]],
         ])
@@ -232,11 +273,13 @@ it('saves a valid structure end to end through the component', function (): void
         ->call('saveStructure')
         ->assertDispatched('toast-show', dataset: ['variant' => 'success']);
 
-    expect(Level::query()->where('study_plan_id', $plan->id)->count())->toBe(1);
+    expect(Level::query()->where('study_plan_id', $plan->id)->count())->toBe(2);
     expect(Prerequisite::query()->where('study_plan_id', $plan->id)->count())->toBe(1);
 
-    $level = Level::query()->where('study_plan_id', $plan->id)->first();
-    expect($level->courses()->count())->toBe(2);
+    $levelA = Level::query()->where('study_plan_id', $plan->id)->where('number', 1)->first();
+    $levelB = Level::query()->where('study_plan_id', $plan->id)->where('number', 2)->first();
+    expect($levelA->courses()->count())->toBe(1);
+    expect($levelB->courses()->count())->toBe(1);
 });
 
 it('auto-numbers each newly added level from the highest existing number', function (): void {
@@ -291,6 +334,8 @@ it('adds and removes a course prerequisite through the inline per-course panel',
         ->set('structureLevels', [
             ['key' => 'lvl-1', 'id' => null, 'number' => 1, 'courses' => [
                 ['course_id' => $courseA->id, 'credits' => 4],
+            ]],
+            ['key' => 'lvl-2', 'id' => null, 'number' => 2, 'courses' => [
                 ['course_id' => $courseB->id, 'credits' => 3],
             ]],
         ])
@@ -307,6 +352,58 @@ it('adds and removes a course prerequisite through the inline per-course panel',
 
     $component->call('removePrerequisite', "{$courseA->id}-{$courseB->id}");
     expect($component->get('structurePrerequisites'))->toBe([]);
+});
+
+it('rejects a prerequisite between two courses in the same level from the inline panel', function (): void {
+    $user = userWithPermissions(['study_plans.view', 'study_plans.edit']);
+    $program = Program::factory()->create();
+    $plan = StudyPlan::factory()->create(['program_id' => $program->id]);
+    $courseA = Course::factory()->create(['program_id' => $program->id]);
+    $courseB = Course::factory()->create(['program_id' => $program->id]);
+
+    $component = Livewire::actingAs($user)
+        ->test(StudyPlanComponent::class)
+        ->call('viewStructure', $plan->id)
+        ->set('structureLevels', [
+            ['key' => 'lvl-1', 'id' => null, 'number' => 1, 'courses' => [
+                ['course_id' => $courseA->id, 'credits' => 4],
+                ['course_id' => $courseB->id, 'credits' => 3],
+            ]],
+        ])
+        ->call('addPrerequisiteFor', $courseB->id, $courseA->id)
+        ->assertDispatched('toast-show', dataset: ['variant' => 'danger']);
+
+    expect($component->get('structurePrerequisites'))->toBe([]);
+});
+
+it('rejects a reversed (mutual/cyclic) prerequisite from the inline panel', function (): void {
+    $user = userWithPermissions(['study_plans.view', 'study_plans.edit']);
+    $program = Program::factory()->create();
+    $plan = StudyPlan::factory()->create(['program_id' => $program->id]);
+    $courseA = Course::factory()->create(['program_id' => $program->id]);
+    $courseB = Course::factory()->create(['program_id' => $program->id]);
+
+    $component = Livewire::actingAs($user)
+        ->test(StudyPlanComponent::class)
+        ->call('viewStructure', $plan->id)
+        ->set('structureLevels', [
+            ['key' => 'lvl-1', 'id' => null, 'number' => 1, 'courses' => [
+                ['course_id' => $courseA->id, 'credits' => 4],
+            ]],
+            ['key' => 'lvl-2', 'id' => null, 'number' => 2, 'courses' => [
+                ['course_id' => $courseB->id, 'credits' => 3],
+            ]],
+        ])
+        ->call('addPrerequisiteFor', $courseB->id, $courseA->id);
+
+    expect($component->get('structurePrerequisites'))->toHaveCount(1);
+
+    // B (level 2) requiring A (level 1) is valid; the reverse — A requiring
+    // B — would form a 2-node cycle and must be rejected.
+    $component->call('addPrerequisiteFor', $courseA->id, $courseB->id)
+        ->assertDispatched('toast-show', dataset: ['variant' => 'danger']);
+
+    expect($component->get('structurePrerequisites'))->toHaveCount(1);
 });
 
 it('rejects a course being set as its own prerequisite from the inline panel', function (): void {

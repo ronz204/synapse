@@ -33,6 +33,7 @@ use Src\Curriculum\StudyPlan\Domain\Entities\Prerequisite;
 use Src\Curriculum\StudyPlan\Domain\Entities\StudyPlan;
 use Src\Curriculum\StudyPlan\Domain\Exceptions\PrerequisiteCourseNotLinkedToPlanException;
 use Src\Curriculum\StudyPlan\Domain\Exceptions\PrerequisiteCoursesMustDifferException;
+use Src\Curriculum\StudyPlan\Domain\Exceptions\PrerequisiteRequiredCourseMustBeInEarlierLevelException;
 use Src\Curriculum\StudyPlan\Domain\Exceptions\TerminalPlanRequiresClosingDateException;
 use Src\Curriculum\StudyPlan\Presentation\Livewire\Forms\StudyPlanForm;
 use Src\Shared\Export\Contracts\ExcelExporterInterface;
@@ -344,15 +345,27 @@ class StudyPlanComponent extends Component
      * Adds a prerequisite the course $dependentCourseId depends on. Picking
      * $requiredCourseId is itself the action — <x-ui.local-course-combobox>
      * calls this directly the moment a result is clicked, no separate
-     * "confirm" step — and its option list is restricted to courses already
-     * linked to this plan (see linkedCourseInfo()), so every value reaching
-     * here already satisfies StudyPlan::addPrerequisite()'s linked-to-plan
-     * invariant.
+     * "confirm" step — and its option list is restricted to courses linked
+     * to an earlier level of this plan (see linkedCourseInfo() and the
+     * structure view's $availableRequiredOptions), so every value reaching
+     * here already satisfies StudyPlan::addPrerequisite()'s invariants in
+     * the normal flow. The same checks are repeated here regardless,
+     * since this method is a public entry point on its own — not merely a
+     * belt-and-suspenders duplicate of the UI filtering.
      */
     public function addPrerequisiteFor(int $dependentCourseId, int $requiredCourseId): void
     {
         if ($requiredCourseId === $dependentCourseId) {
             Flux::toast(variant: 'danger', text: __('A course cannot be a prerequisite of itself.'));
+
+            return;
+        }
+
+        $requiredLevelNumber = $this->levelNumberForCourse($requiredCourseId);
+        $dependentLevelNumber = $this->levelNumberForCourse($dependentCourseId);
+
+        if ($requiredLevelNumber === null || $dependentLevelNumber === null || $requiredLevelNumber >= $dependentLevelNumber) {
+            Flux::toast(variant: 'danger', text: __('A prerequisite course must belong to an earlier level of this plan than the course it is required for.'));
 
             return;
         }
@@ -416,10 +429,38 @@ class StudyPlanComponent extends Component
             Flux::toast(variant: 'danger', text: __('A course cannot be a prerequisite of itself.'));
 
             return;
+        } catch (PrerequisiteRequiredCourseMustBeInEarlierLevelException) {
+            $message = __('A prerequisite course must belong to an earlier level of this plan than the course it is required for.');
+
+            $this->addError('structurePrerequisites', $message);
+            Flux::toast(variant: 'danger', text: $message);
+
+            return;
         }
 
         $this->loadStructureState($updated);
         Flux::toast(variant: 'success', text: __('Study plan structure saved.'));
+    }
+
+    /**
+     * The level number the given course is currently linked to within the
+     * in-memory structure being edited, or null if it isn't linked to any
+     * level yet — mirrors StudyPlan::levelNumberForCourse() on the domain
+     * side, but reads the component's own draft state rather than a
+     * persisted aggregate, since a prerequisite can be added before the
+     * structure is saved.
+     */
+    private function levelNumberForCourse(int $courseId): ?int
+    {
+        foreach ($this->structureLevels as $level) {
+            foreach ($level['courses'] as $link) {
+                if ($link['course_id'] === $courseId) {
+                    return (int) $level['number'];
+                }
+            }
+        }
+
+        return null;
     }
 
     private function loadStructureState(StudyPlan $studyPlan): void

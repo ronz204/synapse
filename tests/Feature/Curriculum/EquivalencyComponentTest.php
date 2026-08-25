@@ -272,6 +272,20 @@ it('streams the attached resolution document back for a user who can view the eq
         ->assertOk();
 });
 
+it('blocks downloading when the equivalency has no resolution document attached, without erroring', function (): void {
+    // Equivalency::factory() never attaches a document — this mirrors a row
+    // inserted outside RegisterEquivalencyUseCase (e.g. bulk seed/import
+    // data), which is the only normal write path that requires one.
+    $user = userWithPermissions(['equivalencies.view']);
+    $equivalency = Equivalency::factory()->create();
+
+    Livewire::actingAs($user)
+        ->test(EquivalencyComponent::class)
+        ->call('downloadDocument', $equivalency->id)
+        ->assertOk()
+        ->assertDispatched('toast-show', dataset: ['variant' => 'danger']);
+});
+
 // A separate "blocks downloading without permission" test isn't
 // constructible: EquivalencyPolicy::view() and viewAny() both check the same
 // equivalencies.view permission, so a user lacking it is already forbidden

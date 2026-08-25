@@ -26,6 +26,7 @@ use Src\Curriculum\Equivalency\Application\UseCases\ResolveEquivalencyContradict
 use Src\Curriculum\Equivalency\Domain\Entities\Equivalency;
 use Src\Curriculum\Equivalency\Domain\Exceptions\CycleDetectedException;
 use Src\Curriculum\Equivalency\Domain\Exceptions\EquivalencyContradictionException;
+use Src\Curriculum\Equivalency\Domain\Exceptions\EquivalencyDocumentNotFoundException;
 use Src\Curriculum\Equivalency\Domain\Exceptions\EquivalencyDocumentRequiredException;
 use Src\Curriculum\Equivalency\Presentation\Livewire\Forms\EquivalencyForm;
 use Src\Shared\Document\Contracts\AttachableDocument;
@@ -178,12 +179,27 @@ class EquivalencyComponent extends Component
      * Gated on `view`, same as the catalog itself — anyone who can see an
      * equivalency's row can inspect the resolution that backs it, which is
      * the whole point of an auditable trail.
+     *
+     * Not every equivalency has a document, though: RegisterEquivalencyUseCase
+     * enforces one on every write it handles, but a row inserted by another
+     * path (bulk seed/import data) can exist without one. Rather than let
+     * that surface as a raw exception, this checks first and reports it as
+     * a toast — nothing is streamed to the browser when there's nothing to
+     * send.
      */
-    public function downloadDocument(int $equivalencyId, FindEquivalencyUseCase $findUseCase, GetEquivalencyDocumentUseCase $documentUseCase): StreamedResponse
+    public function downloadDocument(int $equivalencyId, FindEquivalencyUseCase $findUseCase, GetEquivalencyDocumentUseCase $documentUseCase): ?StreamedResponse
     {
         $this->authorize('view', $findUseCase->handle($equivalencyId));
 
-        $document = $documentUseCase->handle($equivalencyId);
+        try {
+            $document = $documentUseCase->handle($equivalencyId);
+        } catch (EquivalencyDocumentNotFoundException) {
+            Flux::toast(variant: 'danger', text: __('This equivalency has no resolution document attached — there is nothing to download.'));
+
+            return null;
+        }
+
+        Flux::toast(variant: 'success', text: __('Resolution document ready — download starting.'));
 
         return Storage::disk($document->disk)->download($document->path, $document->originalName);
     }
