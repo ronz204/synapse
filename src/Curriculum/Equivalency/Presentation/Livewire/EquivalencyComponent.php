@@ -185,17 +185,11 @@ class EquivalencyComponent extends Component
      * path (bulk seed/import data) can exist without one. Rather than let
      * that surface as a raw exception, this checks first and reports it as
      * a toast — nothing is streamed to the browser when there's nothing to
-     * send. The "preparing" toast and the "ready" one are both dispatched
-     * from this same request (there is no separate async step to report
-     * progress from — the file is read and streamed synchronously), but
-     * still read as a two-step confirmation to the user rather than a
-     * single flash with no acknowledgement that anything started.
+     * send.
      */
     public function downloadDocument(int $equivalencyId, FindEquivalencyUseCase $findUseCase, GetEquivalencyDocumentUseCase $documentUseCase): ?StreamedResponse
     {
         $this->authorize('view', $findUseCase->handle($equivalencyId));
-
-        Flux::toast(variant: 'info', text: __('Preparing the resolution document for download...'));
 
         try {
             $document = $documentUseCase->handle($equivalencyId);
