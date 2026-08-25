@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Src\Curriculum\Modality\Presentation\Livewire\Forms;
 
+use App\Concerns\TextPatternValidationRules;
 use Carbon\CarbonImmutable;
 use Illuminate\Validation\Rule;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
@@ -24,7 +25,7 @@ use Src\Shared\Document\Contracts\AttachableDocument;
  */
 class ModalityAssignmentForm extends Form
 {
-    use WithFileUploads;
+    use TextPatternValidationRules, WithFileUploads;
 
     public ?int $courseId = null;
 
@@ -47,11 +48,19 @@ class ModalityAssignmentForm extends Form
     {
         $filing = $this->isFilingResolution();
 
+        // The pattern check only applies once a value is actually being
+        // filed: 'nullable' doesn't exempt an empty string from a regex
+        // (only a literal null skips it), so adding the pattern
+        // unconditionally would reject the legitimate "leave the whole
+        // resolution block empty" case these fields otherwise allow.
+        $resolutionNumberRules = $filing ? [$this->institutionalCodePatternRule()] : [];
+        $approvingBodyRules = $filing ? [$this->properNamePatternRule()] : [];
+
         return [
             'courseId' => ['required', 'integer', 'exists:courses,id'],
             'modalityId' => ['required', 'integer', 'exists:modalities,id'],
-            'resolutionNumber' => ['nullable', 'string', 'max:60', Rule::requiredIf($filing)],
-            'approvingBody' => ['nullable', 'string', 'max:120', Rule::requiredIf($filing)],
+            'resolutionNumber' => ['nullable', 'string', 'max:60', ...$resolutionNumberRules, Rule::requiredIf($filing)],
+            'approvingBody' => ['nullable', 'string', 'max:120', ...$approvingBodyRules, Rule::requiredIf($filing)],
             'validFrom' => ['nullable', 'date', Rule::requiredIf($filing)],
             'validTo' => ['nullable', 'date', 'after_or_equal:validFrom'],
             'document' => ['nullable', 'file', 'mimes:pdf', 'max:10240', Rule::requiredIf($filing)],

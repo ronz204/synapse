@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Src\Curriculum\StudyPlan\Presentation\Livewire\Forms;
 
+use App\Concerns\TextPatternValidationRules;
 use App\Enums\PlanClassification;
 use DateTimeImmutable;
 use Illuminate\Validation\Rule;
@@ -21,6 +22,8 @@ use Src\Curriculum\StudyPlan\Presentation\Livewire\StudyPlanComponent;
  */
 class StudyPlanForm extends Form
 {
+    use TextPatternValidationRules;
+
     public ?int $programId = null;
 
     public string $name = '';
@@ -53,6 +56,7 @@ class StudyPlanForm extends Form
                 'required',
                 'string',
                 'max:120',
+                $this->properNamePatternRule(),
                 Rule::unique('study_plans', 'name')
                     ->where(fn ($query) => $query->where('program_id', $this->programId))
                     ->ignore($component->editingId),

@@ -51,6 +51,22 @@ it('creates an Active plan with no closing date', function (): void {
     expect(StudyPlan::query()->where('name', 'Plan 2024')->exists())->toBeTrue();
 });
 
+it('blocks a plan name containing characters outside the allowed name pattern', function (): void {
+    $user = userWithPermissions(['study_plans.view', 'study_plans.create']);
+    $program = Program::factory()->create();
+
+    Livewire::actingAs($user)
+        ->test(StudyPlanComponent::class)
+        ->set('form.programId', $program->id)
+        ->set('form.name', 'Plan <script>2024</script> #!')
+        ->set('form.implementationYear', '2024')
+        ->set('form.classification', PlanClassification::Active->value)
+        ->call('save')
+        ->assertHasErrors(['form.name']);
+
+    expect(StudyPlan::query()->where('program_id', $program->id)->exists())->toBeFalse();
+});
+
 it('blocks saving a Terminal plan with no enrollment closing date', function (): void {
     $user = userWithPermissions(['study_plans.view', 'study_plans.create']);
     $program = Program::factory()->create();
@@ -464,4 +480,75 @@ it('returns the correct count of currently active students per plan and level', 
 
     expect($counts[1])->toBe(2);
     expect($counts[2])->toBe(1);
+});
+
+it('blocks removing a level that still has active students assigned to it', function (): void {
+    $user = userWithPermissions(['study_plans.view', 'study_plans.edit']);
+    $program = Program::factory()->create();
+    $plan = StudyPlan::factory()->create(['program_id' => $program->id]);
+    $courseA = Course::factory()->create(['program_id' => $program->id]);
+    $courseB = Course::factory()->create(['program_id' => $program->id]);
+
+    $levelOne = Level::query()->create(['study_plan_id' => $plan->id, 'number' => 1]);
+    $levelOne->courses()->attach($courseA->id, ['credits' => 4]);
+    $levelTwo = Level::query()->create(['study_plan_id' => $plan->id, 'number' => 2]);
+    $levelTwo->courses()->attach($courseB->id, ['credits' => 3]);
+
+    $activeStudent = Student::factory()->create(['active' => true]);
+    StudentPlan::query()->create(['student_id' => $activeStudent->id, 'study_plan_id' => $plan->id, 'current_level' => 1]);
+
+    $expectedMessage = __('This level cannot be removed while it still has active students assigned to it.');
+
+    Livewire::actingAs($user)
+        ->test(StudyPlanComponent::class)
+        ->call('viewStructure', $plan->id)
+        // Level 1 (the one the active student is sitting on) is dropped from
+        // the submitted structure — only level 2 survives.
+        ->set('structureLevels', [
+            ['key' => "level-{$levelTwo->id}", 'id' => $levelTwo->id, 'number' => 2, 'courses' => [
+                ['course_id' => $courseB->id, 'credits' => 3],
+            ]],
+        ])
+        ->call('saveStructure')
+        ->assertDispatched(
+            'toast-show',
+            dataset: ['variant' => 'danger'],
+            slots: ['text' => $expectedMessage],
+        );
+
+    // The removal never persisted — both levels, and the student's
+    // assignment, are exactly as they were before the blocked save.
+    expect(Level::query()->where('study_plan_id', $plan->id)->count())->toBe(2);
+    expect(StudentPlan::query()->where('study_plan_id', $plan->id)->where('current_level', 1)->count())->toBe(1);
+});
+
+it('allows removing a level once it no longer has any active students assigned to it', function (): void {
+    $user = userWithPermissions(['study_plans.view', 'study_plans.edit']);
+    $program = Program::factory()->create();
+    $plan = StudyPlan::factory()->create(['program_id' => $program->id]);
+    $courseA = Course::factory()->create(['program_id' => $program->id]);
+    $courseB = Course::factory()->create(['program_id' => $program->id]);
+
+    $levelOne = Level::query()->create(['study_plan_id' => $plan->id, 'number' => 1]);
+    $levelOne->courses()->attach($courseA->id, ['credits' => 4]);
+    $levelTwo = Level::query()->create(['study_plan_id' => $plan->id, 'number' => 2]);
+    $levelTwo->courses()->attach($courseB->id, ['credits' => 3]);
+
+    // Inactive students on level 1 don't count toward the block — only
+    // currently-active ones do, matching GetActiveStudentCountsUseCase.
+    $inactiveStudent = Student::factory()->create(['active' => false]);
+    StudentPlan::query()->create(['student_id' => $inactiveStudent->id, 'study_plan_id' => $plan->id, 'current_level' => 1]);
+
+    Livewire::actingAs($user)
+        ->test(StudyPlanComponent::class)
+        ->call('viewStructure', $plan->id)
+        ->set('structureLevels', [
+            ['key' => "level-{$levelTwo->id}", 'id' => $levelTwo->id, 'number' => 2, 'courses' => [
+                ['course_id' => $courseB->id, 'credits' => 3],
+            ]],
+        ])
+        ->call('saveStructure')
+        ->assertDispatched('toast-show', dataset: ['variant' => 'success']);
+
+    expect(Level::query()->where('study_plan_id', $plan->id)->count())->toBe(1);
 });

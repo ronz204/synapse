@@ -40,6 +40,18 @@ it('creates a modality for a user holding modalities.create', function (): void 
     expect($modality->requires_resolution)->toBeTrue();
 });
 
+it('blocks a modality name containing characters outside the allowed name pattern', function (): void {
+    $user = userWithPermissions(['modalities.view', 'modalities.create']);
+
+    Livewire::actingAs($user)
+        ->test(ModalityComponent::class)
+        ->set('form.name', 'Virtual <script>#!')
+        ->call('save')
+        ->assertHasErrors(['form.name']);
+
+    expect(Modality::query()->where('name', 'Virtual <script>#!')->exists())->toBeFalse();
+});
+
 it('blocks a duplicate modality name', function (): void {
     $user = userWithPermissions(['modalities.view', 'modalities.create']);
     Modality::factory()->create(['name' => 'Virtual']);

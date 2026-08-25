@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Src\Curriculum\Modality\Presentation\Livewire\Forms;
 
+use App\Concerns\TextPatternValidationRules;
 use Illuminate\Validation\Rule;
 use Livewire\Form;
 use Src\Curriculum\Modality\Application\DTOs\ModalityDTO;
@@ -18,6 +19,8 @@ use Src\Curriculum\Modality\Presentation\Livewire\ModalityComponent;
  */
 class ModalityForm extends Form
 {
+    use TextPatternValidationRules;
+
     public string $name = '';
 
     public bool $requiresResolution = false;
@@ -35,6 +38,7 @@ class ModalityForm extends Form
                 'required',
                 'string',
                 'max:40',
+                $this->properNamePatternRule(),
                 Rule::unique('modalities', 'name')->ignore($component->editingId),
             ],
             'requiresResolution' => ['boolean'],

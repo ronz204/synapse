@@ -76,6 +76,25 @@ it('rejects filing a resolution without an attached document', function (): void
     expect(ModalityResolution::query()->where('resolution_number', 'R-1')->exists())->toBeFalse();
 });
 
+it('blocks filing a resolution whose number or approving body contain characters outside the allowed patterns', function (): void {
+    $user = userWithPermissions(['modality_resolutions.view', 'modality_resolutions.create']);
+    $course = Course::factory()->create();
+    $modality = Modality::factory()->requiresResolution()->create();
+
+    Livewire::actingAs($user)
+        ->test(ModalityAssignmentComponent::class)
+        ->set('form.courseId', $course->id)
+        ->set('form.modalityId', $modality->id)
+        ->set('form.resolutionNumber', 'R-1 <script>')
+        ->set('form.approvingBody', 'Consejo @Universitario!')
+        ->set('form.validFrom', now()->subDay()->toDateString())
+        ->set('form.document', modalityPdfUpload())
+        ->call('assign')
+        ->assertHasErrors(['form.resolutionNumber', 'form.approvingBody']);
+
+    expect(ModalityResolution::query()->where('resolution_number', 'R-1 <script>')->exists())->toBeFalse();
+});
+
 it('files a currently-valid resolution and assigns the modality in the same submission', function (): void {
     $user = userWithPermissions(['modality_resolutions.view', 'modality_resolutions.create']);
     $course = Course::factory()->create();

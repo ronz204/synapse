@@ -86,6 +86,52 @@ it('allows saving a service course with no program', function (): void {
     expect($course->program_id)->toBeNull();
 });
 
+it('blocks a course code containing characters outside the allowed identifier pattern', function (): void {
+    $user = userWithPermissions(['courses.view', 'courses.create']);
+    $program = Program::factory()->create();
+
+    Livewire::actingAs($user)
+        ->test(CourseComponent::class)
+        ->set('form.code', 'INF@101!')
+        ->set('form.name', 'Programming I')
+        ->set('form.programId', $program->id)
+        ->call('save')
+        ->assertHasErrors(['form.code']);
+
+    expect(Course::query()->where('code', 'INF@101!')->exists())->toBeFalse();
+});
+
+it('blocks a course name containing characters outside the allowed name pattern', function (): void {
+    $user = userWithPermissions(['courses.view', 'courses.create']);
+    $program = Program::factory()->create();
+
+    Livewire::actingAs($user)
+        ->test(CourseComponent::class)
+        ->set('form.code', 'INF-101')
+        ->set('form.name', 'Curso <script>malicious</script> #1')
+        ->set('form.programId', $program->id)
+        ->call('save')
+        ->assertHasErrors(['form.name']);
+
+    expect(Course::query()->where('code', 'INF-101')->exists())->toBeFalse();
+});
+
+it('allows a course name with accented letters, parentheses and hyphens', function (): void {
+    $user = userWithPermissions(['courses.view', 'courses.create']);
+    $program = Program::factory()->create();
+
+    Livewire::actingAs($user)
+        ->test(CourseComponent::class)
+        ->set('form.code', 'INF-104')
+        ->set('form.name', 'Programación Orientada a Objetos (Avanzado) - Sección 1')
+        ->set('form.programId', $program->id)
+        ->call('save')
+        ->assertOk()
+        ->assertHasNoErrors();
+
+    expect(Course::query()->where('code', 'INF-104')->exists())->toBeTrue();
+});
+
 it('blocks a duplicate course code', function (): void {
     $user = userWithPermissions(['courses.view', 'courses.create']);
     $program = Program::factory()->create();

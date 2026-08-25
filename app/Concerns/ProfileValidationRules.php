@@ -9,6 +9,8 @@ use Illuminate\Validation\Rules\Unique;
 
 trait ProfileValidationRules
 {
+    use TextPatternValidationRules;
+
     /**
      * Get the validation rules used to validate user profiles.
      *
@@ -29,7 +31,7 @@ trait ProfileValidationRules
      */
     protected function nameRules(): array
     {
-        return ['required', 'string', 'max:255'];
+        return ['required', 'string', 'max:255', $this->properNamePatternRule()];
     }
 
     /**

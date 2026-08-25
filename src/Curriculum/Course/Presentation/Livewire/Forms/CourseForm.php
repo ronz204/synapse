@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Src\Curriculum\Course\Presentation\Livewire\Forms;
 
+use App\Concerns\TextPatternValidationRules;
 use App\Enums\LaboratoryType;
 use Illuminate\Validation\Rule;
 use Livewire\Form;
@@ -19,6 +20,8 @@ use Src\Curriculum\Course\Presentation\Livewire\CourseComponent;
  */
 class CourseForm extends Form
 {
+    use TextPatternValidationRules;
+
     public string $code = '';
 
     public string $name = '';
@@ -46,9 +49,10 @@ class CourseForm extends Form
                 'required',
                 'string',
                 'max:30',
+                $this->institutionalCodePatternRule(),
                 Rule::unique('courses', 'code')->ignore($component->editingId),
             ],
-            'name' => ['required', 'string', 'max:150'],
+            'name' => ['required', 'string', 'max:150', $this->properNamePatternRule()],
             'programId' => [
                 'nullable',
                 'exists:programs,id',

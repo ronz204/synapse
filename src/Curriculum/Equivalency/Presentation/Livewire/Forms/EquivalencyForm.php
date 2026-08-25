@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Src\Curriculum\Equivalency\Presentation\Livewire\Forms;
 
+use App\Concerns\TextPatternValidationRules;
 use App\Enums\EquivalencyDirection;
 use Illuminate\Validation\Rule;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
@@ -25,7 +26,7 @@ use Src\Shared\Document\Contracts\AttachableDocument;
  */
 class EquivalencyForm extends Form
 {
-    use WithFileUploads;
+    use TextPatternValidationRules, WithFileUploads;
 
     public ?int $sourceCourseId = null;
 
@@ -46,7 +47,7 @@ class EquivalencyForm extends Form
             'sourceCourseId' => ['required', 'integer', 'exists:courses,id', 'different:targetCourseId'],
             'targetCourseId' => ['required', 'integer', 'exists:courses,id'],
             'direction' => ['required', Rule::in(array_column(EquivalencyDirection::cases(), 'value'))],
-            'resolutionNumber' => ['required', 'string', 'max:60'],
+            'resolutionNumber' => ['required', 'string', 'max:60', $this->institutionalCodePatternRule()],
             'document' => ['required', 'file', 'mimes:pdf', 'max:10240'],
         ];
     }

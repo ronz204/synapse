@@ -60,6 +60,24 @@ it('blocks saving without an attached resolution document', function (): void {
     expect(Equivalency::query()->count())->toBe(0);
 });
 
+it('blocks a resolution number containing characters outside the allowed code pattern', function (): void {
+    $user = userWithPermissions(['equivalencies.view', 'equivalencies.create']);
+    $source = Course::factory()->create();
+    $target = Course::factory()->create();
+
+    Livewire::actingAs($user)
+        ->test(EquivalencyComponent::class)
+        ->set('form.sourceCourseId', $source->id)
+        ->set('form.targetCourseId', $target->id)
+        ->set('form.direction', EquivalencyDirection::OldToNew->value)
+        ->set('form.resolutionNumber', 'R-1; DROP TABLE equivalencies;')
+        ->set('form.document', pdfUpload())
+        ->call('register')
+        ->assertHasErrors(['form.resolutionNumber']);
+
+    expect(Equivalency::query()->count())->toBe(0);
+});
+
 it('registers an equivalency with the OldToNew direction and persists it exactly as submitted', function (): void {
     $user = userWithPermissions(['equivalencies.view', 'equivalencies.create']);
     $source = Course::factory()->create();

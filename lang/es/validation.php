@@ -219,6 +219,15 @@ return [
         'isBottleneck' => 'curso cuello de botella',
         'requiresLaboratory' => 'requiere laboratorio',
         'laboratoryType' => 'tipo de laboratorio',
+
+        // Curriculum — Equivalency (RC-02) / Modality (RC-03): both forms
+        // bind a "resolutionNumber" field, so one entry here covers either.
+        'resolutionNumber' => 'número de resolución',
+        'approvingBody' => 'ente que aprueba',
+
+        // IdentityAccess — Permission
+        'module' => 'módulo',
+        'action' => 'acción',
     ],
 
 ];
