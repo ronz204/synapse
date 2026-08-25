@@ -350,6 +350,9 @@
   "Equivalency registered.": "Equivalencia registrada.",
   "New resolution registered; the previous one is now Superseded.": "Nueva resolución registrada; la anterior ahora está Superada.",
   "Existing resolution kept; the new submission is now Superseded.": "Resolución existente conservada; la nueva presentación ahora está Superada.",
+  "Preparing the resolution document for download...": "Preparando el documento de resolución para descargar...",
+  "Resolution document ready — download starting.": "Documento de resolución listo — iniciando descarga.",
+  "This equivalency has no resolution document attached — there is nothing to download.": "Esta equivalencia no tiene un documento de resolución adjunto — no hay nada que descargar.",
 
   "Modality catalog": "Catálogo de modalidades",
   "New modality": "Nueva modalidad",
