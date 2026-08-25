@@ -290,6 +290,7 @@
   "Both courses of a prerequisite must be linked to a level of this study plan.": "Ambos cursos de un prerrequisito deben estar vinculados a un nivel de este plan de estudio.",
   "A prerequisite course must belong to an earlier level of this plan than the course it is required for.": "El curso requerido de un prerrequisito debe pertenecer a un nivel anterior al del curso que lo necesita, dentro del mismo plan.",
   "A study plan classified as Terminal must have an enrollment closing date.": "Un plan de estudio clasificado como Terminal debe tener una fecha de cierre de matrícula.",
+  "This level cannot be removed while it still has active students assigned to it.": "Este nivel no se puede eliminar mientras tenga estudiantes activos asignados.",
   "Study plan created.": "Plan de estudio creado.",
   "Study plan updated.": "Plan de estudio actualizado.",
   "Study plan structure saved.": "Estructura del plan de estudio guardada.",

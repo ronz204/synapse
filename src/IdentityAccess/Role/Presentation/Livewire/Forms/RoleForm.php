@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Src\IdentityAccess\Role\Presentation\Livewire\Forms;
 
+use App\Concerns\TextPatternValidationRules;
 use Illuminate\Validation\Rule;
 use Livewire\Form;
 use Src\IdentityAccess\Role\Application\DTOs\RoleDTO;
@@ -19,6 +20,8 @@ use Src\IdentityAccess\Role\Presentation\Livewire\RoleComponent;
  */
 class RoleForm extends Form
 {
+    use TextPatternValidationRules;
+
     public string $name = '';
 
     /** @var array<int, string> */
@@ -37,6 +40,7 @@ class RoleForm extends Form
                 'required',
                 'string',
                 'max:255',
+                $this->properNamePatternRule(),
                 Rule::unique('roles', 'name')->ignore($component->editingId),
             ],
             'permissions' => ['array'],

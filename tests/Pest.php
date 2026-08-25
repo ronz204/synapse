@@ -3,6 +3,7 @@
 use App\Models\Permission;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Testing\TestResponse;
 use Src\Shared\Export\Contracts\ExcelExporterInterface;
 use Src\Shared\Export\Contracts\PdfExporterInterface;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -78,6 +79,21 @@ function userWithPermissions(array $permissions): User
     $user->givePermissionTo(...$permissions);
 
     return $user->fresh();
+}
+
+/**
+ * True when `resources/views/components/siga/sidebar.blade.php` rendered a
+ * nav link for the given (already-translated) label. A plain assertSee()
+ * against the whole dashboard response is not reliable for labels like
+ * "Study Plans"/"Equivalencies" — the dashboard's own KPI cards render the
+ * identical translated text outside the sidebar, so assertSee()/assertDontSee()
+ * would pass or fail regardless of what the sidebar itself did. Matching the
+ * exact `nav-text` markup the sidebar wraps every link label in disambiguates
+ * the two.
+ */
+function sidebarShowsLink(TestResponse $response, string $label): bool
+{
+    return str_contains($response->getContent(), 'class="nav-text" data-labels>'.$label.'</span>');
 }
 
 /**

@@ -9,6 +9,7 @@ use Src\Curriculum\StudyPlan\Domain\Contracts\StudyPlanRepositoryInterface;
 use Src\Curriculum\StudyPlan\Domain\Entities\CourseLink;
 use Src\Curriculum\StudyPlan\Domain\Entities\Level;
 use Src\Curriculum\StudyPlan\Domain\Entities\StudyPlan;
+use Src\Curriculum\StudyPlan\Domain\Exceptions\LevelHasActiveStudentsException;
 use Src\Curriculum\StudyPlan\Domain\Exceptions\StudyPlanNotFoundException;
 
 final class SaveStudyPlanStructureUseCase
@@ -32,6 +33,8 @@ final class SaveStudyPlanStructureUseCase
             $dto->levels,
         );
 
+        $this->assertNoRemovedLevelHasActiveStudents($planId, $studyPlan->levels(), $levels);
+
         $prerequisitePairs = array_map(
             fn ($prerequisiteDto) => ['required' => $prerequisiteDto->requiredCourseId, 'dependent' => $prerequisiteDto->dependentCourseId],
             $dto->prerequisites,
@@ -40,5 +43,41 @@ final class SaveStudyPlanStructureUseCase
         $studyPlan->replaceStructure($levels, $prerequisitePairs);
 
         return $this->repository->save($studyPlan);
+    }
+
+    /**
+     * student_plan.current_level is a plain integer, not a foreign key to
+     * levels.id (see StudyPlanRepositoryInterface::activeStudentCountsByLevel())
+     * — nothing clears or reassigns it when a level disappears. Dropping a
+     * level that active students currently sit on would silently orphan
+     * them: still counted in student_plan, but invisible from every
+     * per-level view afterward, since none of them render a badge for a
+     * level number that no longer exists. Block the save instead, the same
+     * way every other structural invariant here is enforced.
+     *
+     * @param  array<int, Level>  $currentLevels
+     * @param  array<int, Level>  $newLevels
+     */
+    private function assertNoRemovedLevelHasActiveStudents(int $planId, array $currentLevels, array $newLevels): void
+    {
+        $newNumbers = array_map(fn (Level $level) => $level->number(), $newLevels);
+        $removedNumbers = array_diff(
+            array_map(fn (Level $level) => $level->number(), $currentLevels),
+            $newNumbers,
+        );
+
+        if ($removedNumbers === []) {
+            return;
+        }
+
+        $activeCounts = $this->repository->activeStudentCountsByLevel($planId);
+
+        foreach ($removedNumbers as $removedNumber) {
+            $count = $activeCounts[$removedNumber] ?? 0;
+
+            if ($count > 0) {
+                throw LevelHasActiveStudentsException::forLevel($removedNumber, $count);
+            }
+        }
     }
 }

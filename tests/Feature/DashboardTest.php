@@ -12,6 +12,7 @@ use App\Models\StudentAcademicRecord;
 use App\Models\StudentPlan;
 use App\Models\StudyPlan;
 use App\Models\User;
+use Database\Seeders\RoleSeeder;
 use Illuminate\Support\Carbon;
 use Src\Dashboard\Application\UseCases\GetDashboardSummaryUseCase;
 
@@ -28,21 +29,79 @@ test('authenticated users can visit the dashboard', function () {
     $response->assertOk();
 });
 
-test('sidebar only exposes implemented modules', function () {
-    $response = $this->actingAs(User::factory()->create())->get(route('dashboard'));
+test('sidebar shows every module link a fully-permissioned user is authorized for, never a module the app doesn\'t implement', function () {
+    $user = userWithPermissions([
+        'courses.view', 'study_plans.view', 'equivalencies.view',
+        'academic_records.view', 'modalities.view', 'modality_resolutions.view',
+    ]);
+
+    $response = $this->actingAs($user)->get(route('dashboard'));
 
     $response->assertOk()
-        ->assertSee(__('Courses'))
-        ->assertSee(__('Study Plans'))
-        ->assertSee(__('Equivalencies'))
-        ->assertSee(__('Academic History'))
-        ->assertSee(__('Modalities'))
         ->assertDontSee(__('Academic Offer'))
         ->assertDontSee(__('Teachers'))
         ->assertDontSee(__('Classrooms'))
         ->assertDontSee(__('Groups'))
         ->assertDontSee(__('Risks'))
         ->assertDontSee(__('Reports'));
+
+    expect(sidebarShowsLink($response, __('Courses')))->toBeTrue()
+        ->and(sidebarShowsLink($response, __('Study Plans')))->toBeTrue()
+        ->and(sidebarShowsLink($response, __('Equivalencies')))->toBeTrue()
+        ->and(sidebarShowsLink($response, __('Academic History')))->toBeTrue()
+        ->and(sidebarShowsLink($response, __('Modalities')))->toBeTrue();
+});
+
+test('sidebar hides every module link from a user holding none of their view permissions', function () {
+    $response = $this->actingAs(User::factory()->create())->get(route('dashboard'));
+
+    $response->assertOk();
+
+    expect(sidebarShowsLink($response, __('Courses')))->toBeFalse()
+        ->and(sidebarShowsLink($response, __('Study Plans')))->toBeFalse()
+        ->and(sidebarShowsLink($response, __('Equivalencies')))->toBeFalse()
+        ->and(sidebarShowsLink($response, __('Academic History')))->toBeFalse()
+        ->and(sidebarShowsLink($response, __('Modalities')))->toBeFalse()
+        ->and(sidebarShowsLink($response, __('Modality Assignments')))->toBeFalse()
+        ->and(sidebarShowsLink($response, __('Roles')))->toBeFalse()
+        ->and(sidebarShowsLink($response, __('Permissions')))->toBeFalse();
+});
+
+test('sidebar shows only the one module link a narrowly-permissioned user is authorized for', function () {
+    $user = userWithPermissions(['courses.view']);
+
+    $response = $this->actingAs($user)->get(route('dashboard'));
+
+    $response->assertOk();
+
+    expect(sidebarShowsLink($response, __('Courses')))->toBeTrue()
+        ->and(sidebarShowsLink($response, __('Study Plans')))->toBeFalse()
+        ->and(sidebarShowsLink($response, __('Equivalencies')))->toBeFalse()
+        ->and(sidebarShowsLink($response, __('Academic History')))->toBeFalse()
+        ->and(sidebarShowsLink($response, __('Modalities')))->toBeFalse()
+        ->and(sidebarShowsLink($response, __('Modality Assignments')))->toBeFalse()
+        ->and(sidebarShowsLink($response, __('Roles')))->toBeFalse()
+        ->and(sidebarShowsLink($response, __('Permissions')))->toBeFalse();
+});
+
+test('sidebar shows every module link for a Superadmin regardless of granted permissions', function () {
+    $this->seed(RoleSeeder::class);
+
+    $superadmin = User::factory()->create();
+    $superadmin->assignRole('Superadmin');
+
+    $response = $this->actingAs($superadmin)->get(route('dashboard'));
+
+    $response->assertOk();
+
+    expect(sidebarShowsLink($response, __('Courses')))->toBeTrue()
+        ->and(sidebarShowsLink($response, __('Study Plans')))->toBeTrue()
+        ->and(sidebarShowsLink($response, __('Equivalencies')))->toBeTrue()
+        ->and(sidebarShowsLink($response, __('Academic History')))->toBeTrue()
+        ->and(sidebarShowsLink($response, __('Modalities')))->toBeTrue()
+        ->and(sidebarShowsLink($response, __('Modality Assignments')))->toBeTrue()
+        ->and(sidebarShowsLink($response, __('Roles')))->toBeTrue()
+        ->and(sidebarShowsLink($response, __('Permissions')))->toBeTrue();
 });
 
 test('dashboard summarizes curriculum data and active students by plan and level', function () {

@@ -31,6 +31,7 @@ use Src\Curriculum\StudyPlan\Domain\Entities\CourseLink;
 use Src\Curriculum\StudyPlan\Domain\Entities\Level;
 use Src\Curriculum\StudyPlan\Domain\Entities\Prerequisite;
 use Src\Curriculum\StudyPlan\Domain\Entities\StudyPlan;
+use Src\Curriculum\StudyPlan\Domain\Exceptions\LevelHasActiveStudentsException;
 use Src\Curriculum\StudyPlan\Domain\Exceptions\PrerequisiteCourseNotLinkedToPlanException;
 use Src\Curriculum\StudyPlan\Domain\Exceptions\PrerequisiteCoursesMustDifferException;
 use Src\Curriculum\StudyPlan\Domain\Exceptions\PrerequisiteRequiredCourseMustBeInEarlierLevelException;
@@ -434,6 +435,10 @@ class StudyPlanComponent extends Component
 
             $this->addError('structurePrerequisites', $message);
             Flux::toast(variant: 'danger', text: $message);
+
+            return;
+        } catch (LevelHasActiveStudentsException) {
+            Flux::toast(variant: 'danger', text: __('This level cannot be removed while it still has active students assigned to it.'));
 
             return;
         }
